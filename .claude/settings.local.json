@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "WebFetch(domain:geo.zh.ch)",
+      "WebSearch",
+      "WebFetch(domain:maps.zh.ch)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cp \"/Users/wis/Downloads/Geoportal Logo.svg\" \"/Users/wis/claude/GB3/public/geoportal-logo.svg\" && echo \"copied\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
