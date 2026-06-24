@@ -1,5 +1,5 @@
-import { useState } from "react";
 import {
+  Info,
   Ruler,
   Pencil,
   Download,
@@ -22,9 +22,10 @@ interface Tool {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-// Adding a new map tool (e.g. the future tool from the spec) is a one-line
-// entry here — the column renders and wires it automatically.
+// Adding a new map tool is a one-line entry here — the column renders and
+// wires it automatically. The "info" tool drives the Info-Abfrage panel.
 const TOOLS: Tool[] = [
+  { id: "info", label: "Informieren / Abfragen", icon: Info },
   { id: "measure", label: "Messen (Distanz / Fläche)", icon: Ruler },
   { id: "draw", label: "Zeichnen & beschriften", icon: Pencil },
   { id: "export", label: "Daten beziehen", icon: Download },
@@ -33,15 +34,18 @@ const TOOLS: Tool[] = [
   { id: "basemap", label: "Karteninhalt", icon: MapIcon },
 ];
 
-export function ToolsColumn() {
-  const [active, setActive] = useState<string | null>(null);
+interface ToolsColumnProps {
+  activeTool: string | null;
+  onSelectTool: (id: string) => void;
+}
 
+export function ToolsColumn({ activeTool, onSelectTool }: ToolsColumnProps) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex flex-col overflow-hidden rounded-md border border-black/10 bg-white shadow-md">
         {TOOLS.map((tool, i) => {
           const Icon = tool.icon;
-          const isActive = active === tool.id;
+          const isActive = activeTool === tool.id;
           return (
             <div key={tool.id}>
               {i > 0 && <div className="h-px bg-border" />}
@@ -49,7 +53,7 @@ export function ToolsColumn() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setActive(isActive ? null : tool.id)}
+                    onClick={() => onSelectTool(tool.id)}
                     className={cn(
                       "grid size-10 place-items-center transition-colors",
                       isActive

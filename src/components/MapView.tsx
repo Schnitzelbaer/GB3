@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
+import Feature from "ol/Feature";
+import Polygon from "ol/geom/Polygon";
+import CircleGeom from "ol/geom/Circle";
+import Draw from "ol/interaction/Draw";
 import Overlay from "ol/Overlay";
+import { Fill, Stroke, Style } from "ol/style";
 import type WMTS from "ol/source/WMTS";
 import type { Coordinate } from "ol/coordinate";
 import { PanelLeftOpen } from "lucide-react";
@@ -17,8 +24,8 @@ import {
 } from "@/lib/swissProjection";
 import { BASEMAPS, createBasemapSource, type BasemapId } from "@/lib/basemaps";
 import { createOverlayLayer } from "@/lib/overlayLayer";
-import { buildIdentifyResult } from "@/data/identify";
-import type { IdentifyResult } from "@/types";
+import { findMunicipality } from "@/lib/municipalities";
+import type { InfoQueryState, QueryGeometry } from "@/types";
 
 import { Button } from "./ui/button";
 import { SearchBox } from "./map/SearchBox";
@@ -30,13 +37,70 @@ import { LegendePanel } from "./map/LegendePanel";
 
 const PIN_SVG = `<svg width="28" height="38" viewBox="0 0 28 38" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.6 14 24 14 24s14-14.4 14-24C28 6.27 21.73 0 14 0z" fill="#00a0da"/><circle cx="14" cy="9.4" r="2.2" fill="#fff"/><rect x="12.1" y="12.8" width="3.8" height="9.8" rx="1.9" fill="#fff"/></svg>`;
 
+const GEOM_STYLE = new Style({
+  stroke: new Stroke({ color: "#00407C", width: 2 }),
+  fill: new Fill({ color: "rgba(0,64,124,0.12)" }),
+});
+const HIGHLIGHT_STYLE = new Style({
+  stroke: new Stroke({ color: "#ffcc00", width: 3 }),
+  fill: new Fill({ color: "rgba(255,204,0,0.35)" }),
+});
+
+function centroid(ring: Coordinate[]): Coordinate {
+  // ring is closed (last === first); average the distinct vertices.
+  const pts = ring.slice(0, -1);
+  const sum = pts.reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
+  return [sum[0] / pts.length, sum[1] / pts.length];
+}
+
+/** Build OL features that visualise a query geometry. */
+function geometryFeatures(g: QueryGeometry): Feature[] {
+  switch (g.kind) {
+    case "punkt":
+      return [];
+    case "umkreis":
+      return [new Feature(new CircleGeom(g.center, g.radiusM))];
+    case "raster": {
+      const span = g.cells * g.cellSize;
+      const x0 = g.center[0] - span / 2;
+      const y0 = g.center[1] - span / 2;
+      const cells: Feature[] = [];
+      for (let r = 0; r < g.cells; r++)
+        for (let c = 0; c < g.cells; c++) {
+          const x = x0 + c * g.cellSize;
+          const y = y0 + r * g.cellSize;
+          cells.push(
+            new Feature(
+              new Polygon([
+                [
+                  [x, y],
+                  [x + g.cellSize, y],
+                  [x + g.cellSize, y + g.cellSize],
+                  [x, y + g.cellSize],
+                  [x, y],
+                ],
+              ]),
+            ),
+          );
+        }
+      return cells;
+    }
+    case "polygon":
+    case "gemeinde":
+      return [new Feature(new Polygon([g.ring]))];
+  }
+}
+
 interface MapViewProps {
   basemapId: BasemapId;
   onChangeBasemap: (id: BasemapId) => void;
   overlayVisible: boolean;
   overlayOpacity: number;
-  pinCoordinate: Coordinate | null;
-  onIdentify: (result: IdentifyResult) => void;
+  query: InfoQueryState;
+  onQuery: (geometry: QueryGeometry) => void;
+  markedHighlight: Coordinate[] | null;
+  activeTool: string | null;
+  onSelectTool: (id: string) => void;
   leftPanelOpen: boolean;
   onOpenLeftPanel: () => void;
 }
@@ -46,8 +110,11 @@ export function MapView({
   onChangeBasemap,
   overlayVisible,
   overlayOpacity,
-  pinCoordinate,
-  onIdentify,
+  query,
+  onQuery,
+  markedHighlight,
+  activeTool,
+  onSelectTool,
   leftPanelOpen,
   onOpenLeftPanel,
 }: MapViewProps) {
@@ -57,9 +124,15 @@ export function MapView({
   const overlayLayerRef = useRef<ReturnType<typeof createOverlayLayer> | null>(
     null,
   );
+  const geomSourceRef = useRef<VectorSource | null>(null);
+  const highlightSourceRef = useRef<VectorSource | null>(null);
   const pinOverlayRef = useRef<Overlay | null>(null);
-  const onIdentifyRef = useRef(onIdentify);
-  onIdentifyRef.current = onIdentify;
+  const drawRef = useRef<Draw | null>(null);
+
+  const queryRef = useRef(query);
+  queryRef.current = query;
+  const onQueryRef = useRef(onQuery);
+  onQueryRef.current = onQuery;
 
   const [map, setMap] = useState<Map | null>(null);
   const [pointer, setPointer] = useState<Coordinate | null>(null);
@@ -80,6 +153,14 @@ export function MapView({
     overlay.setVisible(overlayVisible);
     overlay.setOpacity(overlayOpacity);
 
+    const geomSource = new VectorSource();
+    const geomLayer = new VectorLayer({ source: geomSource, style: GEOM_STYLE });
+    const highlightSource = new VectorSource();
+    const highlightLayer = new VectorLayer({
+      source: highlightSource,
+      style: HIGHLIGHT_STYLE,
+    });
+
     const view = new View({
       projection: SWISS_PROJECTION,
       center: INITIAL_CENTER,
@@ -91,7 +172,7 @@ export function MapView({
 
     const olMap = new Map({
       target: containerRef.current,
-      layers: [basemapLayer, overlay],
+      layers: [basemapLayer, overlay, geomLayer, highlightLayer],
       view,
       controls: [],
     });
@@ -120,31 +201,41 @@ export function MapView({
     };
     olMap.on("moveend", updateScale);
 
+    // Mode-aware identify. Polygon mode is handled by the Draw interaction.
     olMap.on("singleclick", (e) => {
-      let hit = false;
-      olMap.forEachFeatureAtPixel(
-        e.pixel,
-        () => {
-          hit = true;
-          return true;
-        },
-        { layerFilter: (l) => l === overlay },
-      );
-      onIdentifyRef.current(buildIdentifyResult(e.coordinate, hit));
-    });
-
-    // Pointer cursor over identifiable features.
-    olMap.on("pointermove", (e) => {
-      if (e.dragging) return;
-      const hit = olMap.hasFeatureAtPixel(e.pixel, {
-        layerFilter: (l) => l === overlay,
-      });
-      const target = olMap.getTargetElement();
-      if (target) target.style.cursor = hit ? "pointer" : "";
+      const q = queryRef.current;
+      if (!q.open || q.mode === "polygon") return;
+      const center = e.coordinate;
+      let geometry: QueryGeometry | null = null;
+      switch (q.mode) {
+        case "punkt":
+          geometry = { kind: "punkt", center };
+          break;
+        case "umkreis":
+          geometry = { kind: "umkreis", center, radiusM: q.radiusM };
+          break;
+        case "raster":
+          geometry = { kind: "raster", center, cells: q.gridCount, cellSize: 100 };
+          break;
+        case "gemeinde": {
+          const muni = findMunicipality(center);
+          if (!muni) return;
+          geometry = {
+            kind: "gemeinde",
+            center,
+            name: muni.name,
+            ring: muni.ring,
+          };
+          break;
+        }
+      }
+      if (geometry) onQueryRef.current(geometry);
     });
 
     basemapLayerRef.current = basemapLayer;
     overlayLayerRef.current = overlay;
+    geomSourceRef.current = geomSource;
+    highlightSourceRef.current = highlightSource;
     pinOverlayRef.current = pinOverlay;
     mapRef.current = olMap;
     setMap(olMap);
@@ -176,9 +267,59 @@ export function MapView({
     overlayLayerRef.current?.setOpacity(overlayOpacity);
   }, [overlayOpacity]);
 
+  // Draw the current query geometry + position the pin.
   useEffect(() => {
-    pinOverlayRef.current?.setPosition(pinCoordinate ?? undefined);
-  }, [pinCoordinate]);
+    const src = geomSourceRef.current;
+    if (!src) return;
+    src.clear();
+    const g = query.geometry;
+    if (!g) {
+      pinOverlayRef.current?.setPosition(undefined);
+      return;
+    }
+    const features = geometryFeatures(g);
+    if (features.length) src.addFeatures(features);
+    pinOverlayRef.current?.setPosition(g.center);
+  }, [query.geometry]);
+
+  // Highlight the marked feature.
+  useEffect(() => {
+    const src = highlightSourceRef.current;
+    if (!src) return;
+    src.clear();
+    if (markedHighlight)
+      src.addFeature(new Feature(new Polygon([markedHighlight])));
+  }, [markedHighlight]);
+
+  // Polygon-draw interaction, active only in polygon mode while the tool is on.
+  useEffect(() => {
+    if (!map) return;
+    if (!(query.open && query.mode === "polygon")) return;
+
+    const drawSource = new VectorSource();
+    const draw = new Draw({ source: drawSource, type: "Polygon" });
+    draw.on("drawend", (e) => {
+      const geom = e.feature.getGeometry();
+      if (!(geom instanceof Polygon)) return;
+      const ring = geom.getCoordinates()[0] as Coordinate[];
+      onQueryRef.current({ kind: "polygon", center: centroid(ring), ring });
+      // The visible polygon is rendered from query state; drop the sketch.
+      window.setTimeout(() => drawSource.clear(), 0);
+    });
+    map.addInteraction(draw);
+    drawRef.current = draw;
+
+    return () => {
+      map.removeInteraction(draw);
+      drawRef.current = null;
+    };
+  }, [map, query.open, query.mode]);
+
+  // Affordance: crosshair cursor while the info tool is active.
+  useEffect(() => {
+    const target = map?.getTargetElement();
+    if (target) target.style.cursor = query.open ? "crosshair" : "";
+  }, [map, query.open]);
 
   const attribution =
     BASEMAPS.find((b) => b.id === basemapId)?.attribution ?? "";
@@ -210,7 +351,7 @@ export function MapView({
 
         {/* right edge: tool column */}
         <div className="absolute right-3 top-[5.5rem] z-10">
-          <ToolsColumn />
+          <ToolsColumn activeTool={activeTool} onSelectTool={onSelectTool} />
         </div>
 
         {/* bottom-right: basemap switcher + navigation */}

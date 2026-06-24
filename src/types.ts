@@ -24,24 +24,75 @@ export interface IdentifyAttribute {
   value: string;
 }
 
-export interface IdentifyRecord {
-  index: number;
-  total: number;
+/* ----------------------------------------------------------------------- *
+ * Info-Abfrage (info query) — tab + mode driven identify
+ * ----------------------------------------------------------------------- */
+
+/** What is being asked of the hit features. */
+export type QueryTab = "features" | "statistik" | "datasets";
+
+/** How / where the query is run on the map. */
+export type QueryMode = "punkt" | "raster" | "umkreis" | "polygon" | "gemeinde";
+
+/** The geometry produced by a map click in a given mode. */
+export type QueryGeometry =
+  | { kind: "punkt"; center: Coordinate }
+  | { kind: "umkreis"; center: Coordinate; radiusM: number }
+  | { kind: "raster"; center: Coordinate; cells: number; cellSize: number }
+  | { kind: "polygon"; center: Coordinate; ring: Coordinate[] }
+  | { kind: "gemeinde"; center: Coordinate; name: string; ring: Coordinate[] };
+
+/** A single hit feature with its attributes and a map-highlight ring. */
+export interface IdentifyFeature {
+  id: string;
   attributes: IdentifyAttribute[];
+  /** Polygon ring (LV95) used to highlight the feature on the map. */
+  highlight: Coordinate[];
 }
 
-export interface IdentifySection {
+export interface IdentifyLayer {
   id: string;
   title: string;
-  kind: "map" | "layer";
-  records: IdentifyRecord[];
+  features: IdentifyFeature[];
 }
 
-export interface IdentifyResult {
+export interface IdentifyDataset {
+  id: string;
+  title: string;
+  layers: IdentifyLayer[];
+}
+
+/** Result shown in the "Features" tab. */
+export interface FeaturesResult {
+  /** Center of the query (used for the coordinate readout in Punkt mode). */
   coordinate: Coordinate;
   /** terrain model height (m) */
   dtm: number;
   /** surface model height (m) */
   dom: number;
-  sections: IdentifySection[];
+  datasets: IdentifyDataset[];
+}
+
+/** A catalog map that has features at the queried location ("Datasets" tab). */
+export interface DatasetHit {
+  id: string;
+  title: string;
+  themeTitle: string;
+  hitCount: number;
+}
+
+/** Central, persistent state of the info-query tool (single source of truth). */
+export interface InfoQueryState {
+  /** Info tool active → panel visible. */
+  open: boolean;
+  tab: QueryTab;
+  mode: QueryMode;
+  /** Umkreis radius in metres. */
+  radiusM: number;
+  /** Raster: number of cells per side (N×N), cell size fixed at 100 m. */
+  gridCount: number;
+  /** Geometry of the most recent query (drives the map drawing). */
+  geometry: QueryGeometry | null;
+  /** Currently highlighted feature id (the "Markieren" radio). */
+  markedFeatureId: string | null;
 }
