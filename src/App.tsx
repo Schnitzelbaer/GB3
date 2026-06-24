@@ -8,6 +8,7 @@ import { InfoPanel } from "./components/InfoPanel";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { CATALOG, HERO_LAYER_ID, HERO_LAYER_TITLE } from "./data/catalog";
 import { buildDatasetsResult, buildFeaturesResult } from "./data/infoQuery";
+import { buildStatistik } from "./data/statistik";
 import { findMunicipality } from "./lib/municipalities";
 import type {
   ActiveLayer,
@@ -89,6 +90,10 @@ export default function App() {
   );
   const datasets = useMemo(
     () => (query.geometry ? buildDatasetsResult(query.geometry) : null),
+    [query.geometry],
+  );
+  const statistik = useMemo(
+    () => (query.geometry ? buildStatistik(query.geometry.center) : null),
     [query.geometry],
   );
   const markedHighlight = useMemo<Coordinate[] | null>(() => {
@@ -290,6 +295,7 @@ export default function App() {
                 query={query}
                 features={features}
                 datasets={datasets}
+                statistik={statistik}
                 activeLayerIds={activeLayerIds}
                 onClose={closeInfo}
                 onChangeTab={changeTab}

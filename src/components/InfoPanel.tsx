@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Info as InfoIcon,
   Layers,
-  BarChart3,
   MapPin,
 } from "lucide-react";
 
@@ -21,6 +20,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { CatalogMapRow } from "./catalog/CatalogMapRow";
+import { StatistikView } from "./info/StatistikView";
 import { formatLv95 } from "@/lib/swissProjection";
 import type {
   DatasetHit,
@@ -31,6 +31,7 @@ import type {
   InfoQueryState,
   QueryMode,
   QueryTab,
+  StatBlock,
 } from "@/types";
 
 const TABS: { id: QueryTab; label: string }[] = [
@@ -51,6 +52,7 @@ interface InfoPanelProps {
   query: InfoQueryState;
   features: FeaturesResult | null;
   datasets: DatasetHit[] | null;
+  statistik: StatBlock[] | null;
   activeLayerIds: Set<string>;
   onClose: () => void;
   onChangeTab: (tab: QueryTab) => void;
@@ -286,6 +288,7 @@ export function InfoPanel({
   query,
   features,
   datasets,
+  statistik,
   activeLayerIds,
   onClose,
   onChangeTab,
@@ -461,13 +464,14 @@ export function InfoPanel({
         )}
 
         {query.tab === "statistik" && (
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <BarChart3 className="size-10 text-zinc-300" />
-            <p className="max-w-[18rem] text-sm text-muted-foreground">
-              Statistik-Ansicht – wird gemäss den nachgereichten Vorlagen
-              ausgestaltet.
-            </p>
-          </div>
+          <>
+            {!hasQuery && (
+              <EmptyHint>
+                Klicken Sie in die Karte, um die Statistik abzufragen.
+              </EmptyHint>
+            )}
+            {statistik && <StatistikView blocks={statistik} />}
+          </>
         )}
       </div>
 
