@@ -4,7 +4,6 @@ import {
   Printer,
   ChevronDown,
   ChevronRight,
-  Info as InfoIcon,
   Layers,
   MapPin,
 } from "lucide-react";
@@ -21,6 +20,7 @@ import {
 } from "./ui/select";
 import { CatalogMapRow } from "./catalog/CatalogMapRow";
 import { StatistikView } from "./info/StatistikView";
+import { BlackInfo, DatasetDisclosure } from "./info/DatasetDisclosure";
 import { formatLv95 } from "@/lib/swissProjection";
 import type {
   DatasetHit,
@@ -64,14 +64,6 @@ interface InfoPanelProps {
 }
 
 /* ------------------------------ small bits ------------------------------ */
-
-function BlackInfo() {
-  return (
-    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-foreground text-background">
-      <InfoIcon className="size-3" />
-    </span>
-  );
-}
 
 function NumberField({
   label,
@@ -236,45 +228,17 @@ function DatasetSection({
   markedId: string | null;
   onMark: (id: string | null) => void;
 }) {
-  const [open, setOpen] = useState(true);
-  const Chevron = open ? ChevronDown : ChevronRight;
   return (
-    <div className="py-1">
-      <div className="flex items-center gap-2 rounded bg-muted px-2 py-1.5">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="text-zinc-500 hover:text-foreground"
-        >
-          <Chevron className="size-4" />
-        </button>
-        <span
-          className="size-6 shrink-0 rounded-sm ring-1 ring-black/10"
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg,#c940b2 0%,#f39237 50%,#78be5a 100%)",
-          }}
+    <DatasetDisclosure title={dataset.title}>
+      {dataset.layers.map((layer) => (
+        <LayerSection
+          key={layer.id}
+          layer={layer}
+          markedId={markedId}
+          onMark={onMark}
         />
-        <span className="min-w-0 flex-1 truncate text-[15px] font-bold" title={dataset.title}>
-          {dataset.title}
-        </span>
-        <button type="button" title="Informationen zum Datensatz">
-          <BlackInfo />
-        </button>
-      </div>
-      {open && (
-        <div className="space-y-1 pb-1 pl-5 pt-1">
-          {dataset.layers.map((layer) => (
-            <LayerSection
-              key={layer.id}
-              layer={layer}
-              markedId={markedId}
-              onMark={onMark}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      ))}
+    </DatasetDisclosure>
   );
 }
 

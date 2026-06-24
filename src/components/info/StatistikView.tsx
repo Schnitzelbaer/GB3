@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { DatasetDisclosure } from "./DatasetDisclosure";
 import type { StatBlock, StatCell, StatRow } from "@/types";
 
 const TONE_BG: Record<string, string> = {
@@ -45,8 +46,7 @@ function Row({ row }: { row: StatRow }) {
 function Block({ block }: { block: StatBlock }) {
   const span = block.columns.length + 2; // label + values + unit
   return (
-    <div className="py-4">
-      <h3 className="text-[15px] font-bold leading-tight">{block.title}</h3>
+    <DatasetDisclosure title={block.title}>
       <p className="mb-2 text-xs text-muted-foreground">{block.date}</p>
 
       <div className="overflow-x-auto">
@@ -89,7 +89,7 @@ function Block({ block }: { block: StatBlock }) {
         <span className="font-semibold text-foreground">Quelle:</span>{" "}
         {block.source}
       </p>
-    </div>
+    </DatasetDisclosure>
   );
 }
 
@@ -144,7 +144,7 @@ function ColorLegend() {
 
 export function StatistikView({ blocks }: { blocks: StatBlock[] }) {
   return (
-    <div className="divide-y divide-border">
+    <div className="py-1">
       {blocks.map((b) => (
         <Block key={b.id} block={b} />
       ))}
