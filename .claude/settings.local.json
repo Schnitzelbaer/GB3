@@ -13,7 +13,9 @@
       "Bash(cp \"/Users/wis/Downloads/Geoportal Logo.svg\" \"/Users/wis/claude/GB3/public/geoportal-logo.svg\" && echo \"copied\")",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git branch *)",
+      "Bash(gh auth *)"
     ]
   }
 }

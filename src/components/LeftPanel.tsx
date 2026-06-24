@@ -9,57 +9,14 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Plus,
-  Check,
   GripVertical,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Slider } from "./ui/slider";
+import { CatalogMapRow, MapThumb } from "./catalog/CatalogMapRow";
 import type { ActiveLayer, CatalogTheme } from "@/types";
-
-function thumbHue(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h % 360;
-}
-
-function MapThumb({
-  id,
-  badge,
-}: {
-  id: string;
-  badge?: "add" | "check" | "none";
-}) {
-  const h = thumbHue(id);
-  return (
-    <span
-      className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-sm ring-1 ring-black/10"
-      style={{
-        backgroundImage: `linear-gradient(135deg, hsl(${h} 50% 82%), hsl(${(h + 45) % 360} 55% 60%))`,
-      }}
-    >
-      <span
-        className="absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg,transparent 0 6px,rgba(255,255,255,.6) 6px 7px),repeating-linear-gradient(0deg,transparent 0 6px,rgba(255,255,255,.6) 6px 7px)",
-        }}
-      />
-      {badge === "add" && (
-        <span className="absolute bottom-0 right-0 grid size-4 place-items-center rounded-tl bg-zh-blue text-white">
-          <Plus className="size-3" />
-        </span>
-      )}
-      {badge === "check" && (
-        <span className="absolute bottom-0 left-0 grid size-4 place-items-center rounded-tr bg-zh-blue text-white">
-          <Check className="size-3" />
-        </span>
-      )}
-    </span>
-  );
-}
 
 function IconBtn({
   title,
@@ -299,36 +256,18 @@ export function LeftPanel({
                   </button>
                   {open && (
                     <div>
-                      {theme.maps.map((m) => {
-                        const isActive = activeIds.has(m.id);
-                        return (
-                          <div
-                            key={m.id}
-                            className="flex items-center gap-2 px-3 py-2 hover:bg-muted/60"
-                          >
-                            <button
-                              type="button"
-                              title={
-                                isActive
-                                  ? "Bereits aktiv"
-                                  : "Zur Karte hinzufügen"
-                              }
-                              disabled={isActive}
-                              onClick={() => onAddMap(m.id, m.title)}
-                              className={cn(isActive && "opacity-60")}
-                            >
-                              <MapThumb
-                                id={m.id}
-                                badge={isActive ? "check" : "add"}
-                              />
-                            </button>
-                            <span className="line-clamp-2 min-w-0 flex-1 text-[13px] leading-tight">
-                              {m.title}
-                            </span>
+                      {theme.maps.map((m) => (
+                        <CatalogMapRow
+                          key={m.id}
+                          id={m.id}
+                          title={m.title}
+                          isActive={activeIds.has(m.id)}
+                          onAdd={() => onAddMap(m.id, m.title)}
+                          trailing={
                             <ChevronRight className="size-4 shrink-0 text-zinc-300" />
-                          </div>
-                        );
-                      })}
+                          }
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
