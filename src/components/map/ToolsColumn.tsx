@@ -25,13 +25,13 @@ interface Tool {
 // Adding a new map tool is a one-line entry here — the column renders and
 // wires it automatically. The "info" tool drives the Info-Abfrage panel.
 const TOOLS: Tool[] = [
-  { id: "info", label: "Informieren / Abfragen", icon: Info },
-  { id: "measure", label: "Messen (Distanz / Fläche)", icon: Ruler },
-  { id: "draw", label: "Zeichnen & beschriften", icon: Pencil },
+  { id: "info", label: "Info", icon: Info },
+  { id: "measure", label: "Messen", icon: Ruler },
+  { id: "draw", label: "Zeichnen", icon: Pencil },
   { id: "export", label: "Daten beziehen", icon: Download },
-  { id: "print", label: "Drucken (PDF)", icon: Printer },
-  { id: "share", label: "Teilen / Link erzeugen", icon: Share2 },
-  { id: "basemap", label: "Karteninhalt", icon: MapIcon },
+  { id: "print", label: "Drucken", icon: Printer },
+  { id: "share", label: "Teilen", icon: Share2 },
+  { id: "basemap", label: "Kartendienst importieren", icon: MapIcon },
 ];
 
 interface ToolsColumnProps {

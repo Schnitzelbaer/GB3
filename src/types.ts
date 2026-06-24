@@ -83,10 +83,17 @@ export interface DatasetHit {
 
 /** Central, persistent state of the info-query tool (single source of truth). */
 export interface InfoQueryState {
-  /** Info tool active → panel visible. */
-  open: boolean;
+  /** Info tool selected. Default true; only another tool deselects it. */
+  active: boolean;
+  /** Second column (Features/Statistik/Datasets icons) visible. */
+  flyoutOpen: boolean;
+  /** Info panel visible — only after the first map click. */
+  panelOpen: boolean;
+  /** Query kind (Features/Statistik/Datasets) — driven by panel tabs + flyout. */
   tab: QueryTab;
   mode: QueryMode;
+  /** Mode to restore when an aborted polygon draw is cancelled with Escape. */
+  prevMode: QueryMode;
   /** Umkreis radius in metres. */
   radiusM: number;
   /** Raster: number of cells per side (N×N), cell size fixed at 100 m. */

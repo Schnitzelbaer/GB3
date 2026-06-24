@@ -25,12 +25,13 @@ import {
 import { BASEMAPS, createBasemapSource, type BasemapId } from "@/lib/basemaps";
 import { createOverlayLayer } from "@/lib/overlayLayer";
 import { findMunicipality } from "@/lib/municipalities";
-import type { InfoQueryState, QueryGeometry } from "@/types";
+import type { InfoQueryState, QueryGeometry, QueryTab } from "@/types";
 
 import { Button } from "./ui/button";
 import { SearchBox } from "./map/SearchBox";
 import { NavControls } from "./map/NavControls";
 import { ToolsColumn } from "./map/ToolsColumn";
+import { InfoArtFlyout } from "./map/InfoArtFlyout";
 import { StatusBar } from "./map/StatusBar";
 import { BasemapSwitcher } from "./map/BasemapSwitcher";
 import { LegendePanel } from "./map/LegendePanel";
@@ -98,6 +99,8 @@ interface MapViewProps {
   overlayOpacity: number;
   query: InfoQueryState;
   onQuery: (geometry: QueryGeometry) => void;
+  onSelectArt: (tab: QueryTab) => void;
+  onAbortPolygon: () => void;
   markedHighlight: Coordinate[] | null;
   activeTool: string | null;
   onSelectTool: (id: string) => void;
@@ -112,6 +115,8 @@ export function MapView({
   overlayOpacity,
   query,
   onQuery,
+  onSelectArt,
+  onAbortPolygon,
   markedHighlight,
   activeTool,
   onSelectTool,
@@ -133,6 +138,8 @@ export function MapView({
   queryRef.current = query;
   const onQueryRef = useRef(onQuery);
   onQueryRef.current = onQuery;
+  const onAbortPolygonRef = useRef(onAbortPolygon);
+  onAbortPolygonRef.current = onAbortPolygon;
 
   const [map, setMap] = useState<Map | null>(null);
   const [pointer, setPointer] = useState<Coordinate | null>(null);
@@ -204,7 +211,7 @@ export function MapView({
     // Mode-aware identify. Polygon mode is handled by the Draw interaction.
     olMap.on("singleclick", (e) => {
       const q = queryRef.current;
-      if (!q.open || q.mode === "polygon") return;
+      if (!q.active || q.mode === "polygon") return;
       const center = e.coordinate;
       let geometry: QueryGeometry | null = null;
       switch (q.mode) {
@@ -267,20 +274,22 @@ export function MapView({
     overlayLayerRef.current?.setOpacity(overlayOpacity);
   }, [overlayOpacity]);
 
-  // Draw the current query geometry + position the pin.
+  // Draw the current query geometry + position the pin. While a polygon is
+  // pending (mode is polygon but nothing drawn yet), suppress the old pin/shape.
   useEffect(() => {
     const src = geomSourceRef.current;
     if (!src) return;
     src.clear();
     const g = query.geometry;
-    if (!g) {
+    const polygonPending = query.mode === "polygon" && g?.kind !== "polygon";
+    if (!g || polygonPending) {
       pinOverlayRef.current?.setPosition(undefined);
       return;
     }
     const features = geometryFeatures(g);
     if (features.length) src.addFeatures(features);
     pinOverlayRef.current?.setPosition(g.center);
-  }, [query.geometry]);
+  }, [query.geometry, query.mode]);
 
   // Highlight the marked feature.
   useEffect(() => {
@@ -292,9 +301,11 @@ export function MapView({
   }, [markedHighlight]);
 
   // Polygon-draw interaction, active only in polygon mode while the tool is on.
+  // Escape aborts the sketch; if the polygon is still pending (just switched to
+  // polygon, nothing committed), it reverts to the previously active mode.
   useEffect(() => {
     if (!map) return;
-    if (!(query.open && query.mode === "polygon")) return;
+    if (!(query.active && query.mode === "polygon")) return;
 
     const drawSource = new VectorSource();
     const draw = new Draw({ source: drawSource, type: "Polygon" });
@@ -309,17 +320,22 @@ export function MapView({
     map.addInteraction(draw);
     drawRef.current = draw;
 
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      draw.abortDrawing();
+      const q = queryRef.current;
+      // Only revert when nothing has been committed yet (polygon pending).
+      if (q.mode === "polygon" && q.geometry?.kind !== "polygon")
+        onAbortPolygonRef.current();
+    };
+    document.addEventListener("keydown", onKeyDown);
+
     return () => {
+      document.removeEventListener("keydown", onKeyDown);
       map.removeInteraction(draw);
       drawRef.current = null;
     };
-  }, [map, query.open, query.mode]);
-
-  // Affordance: crosshair cursor while the info tool is active.
-  useEffect(() => {
-    const target = map?.getTargetElement();
-    if (target) target.style.cursor = query.open ? "crosshair" : "";
-  }, [map, query.open]);
+  }, [map, query.active, query.mode]);
 
   const attribution =
     BASEMAPS.find((b) => b.id === basemapId)?.attribution ?? "";
@@ -349,8 +365,11 @@ export function MapView({
           <SearchBox />
         </div>
 
-        {/* right edge: tool column */}
-        <div className="absolute right-3 top-[5.5rem] z-10">
+        {/* right edge: Abfrage-Art flyout (left) + tool column */}
+        <div className="absolute right-3 top-[5.5rem] z-10 flex items-start gap-2">
+          {query.flyoutOpen && (
+            <InfoArtFlyout tab={query.tab} onSelect={onSelectArt} />
+          )}
           <ToolsColumn activeTool={activeTool} onSelectTool={onSelectTool} />
         </div>
 

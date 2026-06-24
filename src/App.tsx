@@ -8,6 +8,7 @@ import { InfoPanel } from "./components/InfoPanel";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { CATALOG, HERO_LAYER_ID, HERO_LAYER_TITLE } from "./data/catalog";
 import { buildDatasetsResult, buildFeaturesResult } from "./data/infoQuery";
+import { findMunicipality } from "./lib/municipalities";
 import type {
   ActiveLayer,
   InfoQueryState,
@@ -21,14 +22,46 @@ const clamp = (v: number, min: number, max: number) =>
   Math.min(max, Math.max(min, v));
 
 const INITIAL_QUERY: InfoQueryState = {
-  open: true,
+  active: true,
+  flyoutOpen: false,
+  panelOpen: false,
   tab: "features",
   mode: "punkt",
+  prevMode: "punkt",
   radiusM: 500,
   gridCount: 3,
   geometry: null,
   markedFeatureId: null,
 };
+
+/**
+ * Derive the geometry for a (non-polygon) mode around an existing centre, so
+ * switching modes keeps the clicked point. Polygon is handled separately
+ * because it needs to be drawn.
+ */
+function deriveGeometry(
+  center: Coordinate,
+  mode: QueryMode,
+  radiusM: number,
+  gridCount: number,
+): QueryGeometry | null {
+  switch (mode) {
+    case "punkt":
+      return { kind: "punkt", center };
+    case "umkreis":
+      return { kind: "umkreis", center, radiusM };
+    case "raster":
+      return { kind: "raster", center, cells: gridCount, cellSize: 100 };
+    case "gemeinde": {
+      const m = findMunicipality(center);
+      return m
+        ? { kind: "gemeinde", center, name: m.name, ring: m.ring }
+        : { kind: "punkt", center };
+    }
+    case "polygon":
+      return null;
+  }
+}
 
 export default function App() {
   const [leftOpen, setLeftOpen] = useState(true);
@@ -69,25 +102,40 @@ export default function App() {
   }, [query.markedFeatureId, features]);
 
   /* ------------------------------- tools/query ---------------------------- */
-  const activeTool = query.open ? "info" : stubTool;
+  // Info tool cannot be deselected — only another tool turns it off.
+  const activeTool = query.active ? "info" : stubTool;
 
   const handleSelectTool = useCallback((id: string) => {
     if (id === "info") {
       setStubTool(null);
-      setQuery((q) =>
-        q.open
-          ? { ...q, open: false, geometry: null, markedFeatureId: null }
-          : { ...q, open: true },
-      );
+      setQuery((q) => ({ ...q, active: true, flyoutOpen: true }));
     } else {
-      setStubTool((t) => (t === id ? null : id));
-      setQuery((q) => ({ ...q, open: false, geometry: null, markedFeatureId: null }));
+      setStubTool(id);
+      setQuery((q) => ({
+        ...q,
+        active: false,
+        flyoutOpen: false,
+        panelOpen: false,
+        geometry: null,
+        markedFeatureId: null,
+      }));
     }
   }, []);
 
+  const selectArt = useCallback(
+    (tab: QueryTab) => setQuery((q) => ({ ...q, tab, flyoutOpen: false })),
+    [],
+  );
+
   const runQuery = useCallback(
     (geometry: QueryGeometry) =>
-      setQuery((q) => ({ ...q, geometry, markedFeatureId: null })),
+      setQuery((q) => ({
+        ...q,
+        geometry,
+        panelOpen: true,
+        flyoutOpen: false,
+        markedFeatureId: null,
+      })),
     [],
   );
   const changeTab = useCallback(
@@ -96,7 +144,28 @@ export default function App() {
   );
   const changeMode = useCallback(
     (mode: QueryMode) =>
-      setQuery((q) => ({ ...q, mode, geometry: null, markedFeatureId: null })),
+      setQuery((q) => {
+        if (mode === "polygon") {
+          // Keep geometry (panel content persists); the map suppresses the old
+          // pin/shape while the polygon is drawn. Escape restores prevMode.
+          return {
+            ...q,
+            mode,
+            prevMode: q.mode === "polygon" ? q.prevMode : q.mode,
+            markedFeatureId: null,
+          };
+        }
+        const center = q.geometry?.center;
+        const geometry = center
+          ? deriveGeometry(center, mode, q.radiusM, q.gridCount)
+          : q.geometry;
+        return { ...q, mode, geometry, markedFeatureId: null };
+      }),
+    [],
+  );
+  const abortPolygon = useCallback(
+    () =>
+      setQuery((q) => (q.mode === "polygon" ? { ...q, mode: q.prevMode } : q)),
     [],
   );
   const changeRadius = useCallback(
@@ -132,7 +201,7 @@ export default function App() {
     () =>
       setQuery((q) => ({
         ...q,
-        open: false,
+        panelOpen: false,
         geometry: null,
         markedFeatureId: null,
       })),
@@ -199,6 +268,8 @@ export default function App() {
             overlayOpacity={overlayOpacity}
             query={query}
             onQuery={runQuery}
+            onSelectArt={selectArt}
+            onAbortPolygon={abortPolygon}
             markedHighlight={markedHighlight}
             activeTool={activeTool}
             onSelectTool={handleSelectTool}
@@ -207,7 +278,7 @@ export default function App() {
           />
         </div>
 
-        {query.open && (
+        {query.active && query.panelOpen && (
           <>
             <ResizeHandle
               onResize={(x) =>
