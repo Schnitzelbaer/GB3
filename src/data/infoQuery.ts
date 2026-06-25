@@ -101,6 +101,13 @@ interface DatasetDef {
 
 const YEARS = ["2021", "2022", "2023"];
 
+/** A normal map layer that has no statistics-displayable data. Shown across
+ * all tabs; the Statistik tab renders a placeholder for it. */
+export const NO_STATS_LAYER = {
+  id: "bauprojekte",
+  title: "Laufende Bauprojekte",
+};
+
 const DATASET_DEFS: DatasetDef[] = [
   {
     id: "bevoelkerung",
@@ -235,6 +242,55 @@ const DATASET_DEFS: DatasetDef[] = [
       },
     ],
   },
+  {
+    id: NO_STATS_LAYER.id,
+    title: NO_STATS_LAYER.title,
+    layers: [
+      {
+        id: "bauprojekte-flaechen",
+        title: "Bauprojekte",
+        countFactor: 0.8,
+        attrs: (r) => [
+          {
+            label: "Projekt-Nr.",
+            value: `BP-${int(r, 2021, 2026)}-${int(r, 100, 999)}`,
+          },
+          {
+            label: "Bezeichnung",
+            value: pick(r, [
+              "Neubau Mehrfamilienhaus",
+              "Umbau / Sanierung",
+              "Ersatzneubau",
+              "Anbau",
+              "Aufstockung",
+            ]),
+          },
+          {
+            label: "Status",
+            value: pick(r, [
+              "Baugesuch eingereicht",
+              "Baubewilligung erteilt",
+              "im Bau",
+              "abgeschlossen",
+            ]),
+          },
+          {
+            label: "Bauherrschaft",
+            value: pick(r, [
+              "Privat",
+              "Baugenossenschaft",
+              "Stadt Zürich",
+              "Immobilien AG",
+            ]),
+          },
+          {
+            label: "Eingabedatum",
+            value: `${int(r, 1, 28)}.${int(r, 1, 12)}.${int(r, 2021, 2025)}`,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 /* ------------------------------- builders ------------------------------- */
@@ -283,8 +339,16 @@ export function buildDatasetsResult(g: QueryGeometry): DatasetHit[] {
   const base = baseCount(g);
   const n = clamp(3 + Math.round(base * 1.2), 3, 9);
 
+  // The "no statistics" layer always appears at the top.
+  const out: DatasetHit[] = [
+    {
+      id: NO_STATS_LAYER.id,
+      title: NO_STATS_LAYER.title,
+      themeTitle: "Bauten",
+      hitCount: int(r, 1, Math.max(2, base * 3)),
+    },
+  ];
   const pool = [...FLAT_MAPS];
-  const out: DatasetHit[] = [];
   for (let k = 0; k < n && pool.length > 0; k++) {
     const idx = Math.floor(r() * pool.length);
     const m = pool.splice(idx, 1)[0];
