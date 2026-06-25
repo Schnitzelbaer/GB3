@@ -1,5 +1,4 @@
 import {
-  Info,
   Ruler,
   Pencil,
   Download,
@@ -15,6 +14,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { getArt } from "./InfoArtFlyout";
+import type { QueryTab } from "@/types";
 
 interface Tool {
   id: string;
@@ -23,9 +24,10 @@ interface Tool {
 }
 
 // Adding a new map tool is a one-line entry here — the column renders and
-// wires it automatically. The "info" tool drives the Info-Abfrage panel.
+// wires it automatically. The "info" tool's icon/label reflect the active
+// Abfrage-Art (Features/Statistik/Datasets) and are overridden at render.
 const TOOLS: Tool[] = [
-  { id: "info", label: "Info", icon: Info },
+  { id: "info", label: "Info", icon: MapIcon },
   { id: "measure", label: "Messen", icon: Ruler },
   { id: "draw", label: "Zeichnen", icon: Pencil },
   { id: "export", label: "Daten beziehen", icon: Download },
@@ -37,14 +39,23 @@ const TOOLS: Tool[] = [
 interface ToolsColumnProps {
   activeTool: string | null;
   onSelectTool: (id: string) => void;
+  /** Current Abfrage-Art — drives the Info tool's icon and tooltip. */
+  infoTab: QueryTab;
 }
 
-export function ToolsColumn({ activeTool, onSelectTool }: ToolsColumnProps) {
+export function ToolsColumn({
+  activeTool,
+  onSelectTool,
+  infoTab,
+}: ToolsColumnProps) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex flex-col overflow-hidden rounded-md border border-black/10 bg-white shadow-md">
         {TOOLS.map((tool, i) => {
-          const Icon = tool.icon;
+          // The Info tool mirrors the active query art.
+          const art = tool.id === "info" ? getArt(infoTab) : null;
+          const Icon = art ? art.icon : tool.icon;
+          const label = art ? `${art.label} Abfrage` : tool.label;
           const isActive = activeTool === tool.id;
           return (
             <div key={tool.id}>
@@ -64,7 +75,7 @@ export function ToolsColumn({ activeTool, onSelectTool }: ToolsColumnProps) {
                     <Icon className="size-[18px]" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="left">{tool.label}</TooltipContent>
+                <TooltipContent side="left">{label}</TooltipContent>
               </Tooltip>
             </div>
           );

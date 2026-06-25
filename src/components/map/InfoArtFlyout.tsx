@@ -9,7 +9,7 @@ import {
 } from "../ui/tooltip";
 import type { QueryTab } from "@/types";
 
-const ARTS: {
+export const ARTS: {
   id: QueryTab;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -18,6 +18,11 @@ const ARTS: {
   { id: "statistik", label: "Statistik", icon: BarChart3 },
   { id: "datasets", label: "Datasets", icon: Database },
 ];
+
+/** The art definition for a tab (falls back to Features). */
+export function getArt(tab: QueryTab) {
+  return ARTS.find((a) => a.id === tab) ?? ARTS[0];
+}
 
 interface InfoArtFlyoutProps {
   tab: QueryTab;

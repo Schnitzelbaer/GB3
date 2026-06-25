@@ -342,7 +342,11 @@ export function MapView({
           {query.flyoutOpen && (
             <InfoArtFlyout tab={query.tab} onSelect={onSelectArt} />
           )}
-          <ToolsColumn activeTool={activeTool} onSelectTool={onSelectTool} />
+          <ToolsColumn
+            activeTool={activeTool}
+            onSelectTool={onSelectTool}
+            infoTab={query.tab}
+          />
         </div>
 
         {/* bottom-right: basemap switcher + navigation */}
