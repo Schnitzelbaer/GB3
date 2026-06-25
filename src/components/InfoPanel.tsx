@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { Switch } from "./ui/switch";
 import { CatalogMapRow } from "./catalog/CatalogMapRow";
 import { StatistikView } from "./info/StatistikView";
 import { BlackInfo, DatasetDisclosure } from "./info/DatasetDisclosure";
@@ -42,7 +43,6 @@ const TABS: { id: QueryTab; label: string }[] = [
 
 const MODES: { id: QueryMode; label: string }[] = [
   { id: "punkt", label: "Punkt" },
-  { id: "raster", label: "Raster" },
   { id: "umkreis", label: "Umkreis" },
   { id: "polygon", label: "Polygon" },
   { id: "gemeinde", label: "Gemeinde" },
@@ -58,7 +58,7 @@ interface InfoPanelProps {
   onChangeTab: (tab: QueryTab) => void;
   onChangeMode: (mode: QueryMode) => void;
   onChangeRadius: (m: number) => void;
-  onChangeGrid: (n: number) => void;
+  onToggleClipped: (v: boolean) => void;
   onSetMarked: (featureId: string | null) => void;
   onAddMap: (id: string, title: string) => void;
 }
@@ -258,7 +258,7 @@ export function InfoPanel({
   onChangeTab,
   onChangeMode,
   onChangeRadius,
-  onChangeGrid,
+  onToggleClipped,
   onSetMarked,
   onAddMap,
 }: InfoPanelProps) {
@@ -324,16 +324,18 @@ export function InfoPanel({
               onChange={onChangeRadius}
             />
           )}
-          {query.mode === "raster" && (
-            <NumberField
-              label="Anzahl"
-              value={query.gridCount}
-              suffix="× 100 m"
-              min={1}
-              onChange={onChangeGrid}
-            />
-          )}
         </div>
+
+        {/* Clipped-features toggle — area modes only (no effect on Punkt). */}
+        {query.mode !== "punkt" && (
+          <label className="flex h-11 items-center justify-between gap-2 rounded-md border border-input px-3">
+            <span className="text-sm">Angeschnittene Features</span>
+            <Switch
+              checked={query.includeClipped}
+              onCheckedChange={onToggleClipped}
+            />
+          </label>
+        )}
       </div>
 
       {/* content */}

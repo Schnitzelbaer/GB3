@@ -32,13 +32,12 @@ export interface IdentifyAttribute {
 export type QueryTab = "features" | "statistik" | "datasets";
 
 /** How / where the query is run on the map. */
-export type QueryMode = "punkt" | "raster" | "umkreis" | "polygon" | "gemeinde";
+export type QueryMode = "punkt" | "umkreis" | "polygon" | "gemeinde";
 
 /** The geometry produced by a map click in a given mode. */
 export type QueryGeometry =
   | { kind: "punkt"; center: Coordinate }
   | { kind: "umkreis"; center: Coordinate; radiusM: number }
-  | { kind: "raster"; center: Coordinate; cells: number; cellSize: number }
   | { kind: "polygon"; center: Coordinate; ring: Coordinate[] }
   | { kind: "gemeinde"; center: Coordinate; name: string; ring: Coordinate[] };
 
@@ -119,8 +118,8 @@ export interface InfoQueryState {
   prevMode: QueryMode;
   /** Umkreis radius in metres. */
   radiusM: number;
-  /** Raster: number of cells per side (N×N), cell size fixed at 100 m. */
-  gridCount: number;
+  /** Include features clipped by the query boundary (area modes only). */
+  includeClipped: boolean;
   /** Geometry of the most recent query (drives the map drawing). */
   geometry: QueryGeometry | null;
   /** Currently highlighted feature id (the "Markieren" radio). */

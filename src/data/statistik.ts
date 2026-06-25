@@ -58,9 +58,15 @@ function row(label: string, values: number[], decimals = 0): StatRow {
 /* ------------------------------- builder -------------------------------- */
 
 /** Build the statistic blocks for the queried location (mock). */
-export function buildStatistik(center: Coordinate): StatBlock[] {
+export function buildStatistik(
+  center: Coordinate,
+  includeClipped = true,
+): StatBlock[] {
   const r = makeRng(hashCoord(center));
-  const n = () => rint(r, 9, 15); // sample size per metric
+  // Excluding boundary-clipped features draws from a smaller sample.
+  const lo = includeClipped ? 9 : 5;
+  const hi = includeClipped ? 15 : 9;
+  const n = () => rint(r, lo, hi); // sample size per metric
 
   const bevoelkerung: StatBlock = {
     id: "bevoelkerung",

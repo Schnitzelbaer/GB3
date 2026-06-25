@@ -61,31 +61,6 @@ function geometryFeatures(g: QueryGeometry): Feature[] {
       return [];
     case "umkreis":
       return [new Feature(new CircleGeom(g.center, g.radiusM))];
-    case "raster": {
-      const span = g.cells * g.cellSize;
-      const x0 = g.center[0] - span / 2;
-      const y0 = g.center[1] - span / 2;
-      const cells: Feature[] = [];
-      for (let r = 0; r < g.cells; r++)
-        for (let c = 0; c < g.cells; c++) {
-          const x = x0 + c * g.cellSize;
-          const y = y0 + r * g.cellSize;
-          cells.push(
-            new Feature(
-              new Polygon([
-                [
-                  [x, y],
-                  [x + g.cellSize, y],
-                  [x + g.cellSize, y + g.cellSize],
-                  [x, y + g.cellSize],
-                  [x, y],
-                ],
-              ]),
-            ),
-          );
-        }
-      return cells;
-    }
     case "polygon":
     case "gemeinde":
       return [new Feature(new Polygon([g.ring]))];
@@ -220,9 +195,6 @@ export function MapView({
           break;
         case "umkreis":
           geometry = { kind: "umkreis", center, radiusM: q.radiusM };
-          break;
-        case "raster":
-          geometry = { kind: "raster", center, cells: q.gridCount, cellSize: 100 };
           break;
         case "gemeinde": {
           const muni = findMunicipality(center);

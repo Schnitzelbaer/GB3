@@ -30,7 +30,7 @@ const INITIAL_QUERY: InfoQueryState = {
   mode: "punkt",
   prevMode: "punkt",
   radiusM: 500,
-  gridCount: 3,
+  includeClipped: true,
   geometry: null,
   markedFeatureId: null,
 };
@@ -44,15 +44,12 @@ function deriveGeometry(
   center: Coordinate,
   mode: QueryMode,
   radiusM: number,
-  gridCount: number,
 ): QueryGeometry | null {
   switch (mode) {
     case "punkt":
       return { kind: "punkt", center };
     case "umkreis":
       return { kind: "umkreis", center, radiusM };
-    case "raster":
-      return { kind: "raster", center, cells: gridCount, cellSize: 100 };
     case "gemeinde": {
       const m = findMunicipality(center);
       return m
@@ -85,16 +82,25 @@ export default function App() {
 
   /* ----------------------------- query results ---------------------------- */
   const features = useMemo(
-    () => (query.geometry ? buildFeaturesResult(query.geometry) : null),
-    [query.geometry],
+    () =>
+      query.geometry
+        ? buildFeaturesResult(query.geometry, query.includeClipped)
+        : null,
+    [query.geometry, query.includeClipped],
   );
   const datasets = useMemo(
-    () => (query.geometry ? buildDatasetsResult(query.geometry) : null),
-    [query.geometry],
+    () =>
+      query.geometry
+        ? buildDatasetsResult(query.geometry, query.includeClipped)
+        : null,
+    [query.geometry, query.includeClipped],
   );
   const statistik = useMemo(
-    () => (query.geometry ? buildStatistik(query.geometry.center) : null),
-    [query.geometry],
+    () =>
+      query.geometry
+        ? buildStatistik(query.geometry.center, query.includeClipped)
+        : null,
+    [query.geometry, query.includeClipped],
   );
   const markedHighlight = useMemo<Coordinate[] | null>(() => {
     if (!query.markedFeatureId || !features) return null;
@@ -162,7 +168,7 @@ export default function App() {
         }
         const center = q.geometry?.center;
         const geometry = center
-          ? deriveGeometry(center, mode, q.radiusM, q.gridCount)
+          ? deriveGeometry(center, mode, q.radiusM)
           : q.geometry;
         return { ...q, mode, geometry, markedFeatureId: null };
       }),
@@ -185,16 +191,9 @@ export default function App() {
       })),
     [],
   );
-  const changeGrid = useCallback(
-    (gridCount: number) =>
-      setQuery((q) => ({
-        ...q,
-        gridCount,
-        geometry:
-          q.geometry?.kind === "raster"
-            ? { ...q.geometry, cells: gridCount }
-            : q.geometry,
-      })),
+  const toggleClipped = useCallback(
+    (includeClipped: boolean) =>
+      setQuery((q) => ({ ...q, includeClipped })),
     [],
   );
   const setMarked = useCallback(
@@ -301,7 +300,7 @@ export default function App() {
                 onChangeTab={changeTab}
                 onChangeMode={changeMode}
                 onChangeRadius={changeRadius}
-                onChangeGrid={changeGrid}
+                onToggleClipped={toggleClipped}
                 onSetMarked={setMarked}
                 onAddMap={addMap}
               />

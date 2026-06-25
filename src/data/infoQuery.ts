@@ -59,8 +59,6 @@ function baseCount(g: QueryGeometry): number {
       return 1;
     case "umkreis":
       return clamp(Math.round(g.radiusM / 180), 1, 6);
-    case "raster":
-      return clamp(Math.round((g.cells * g.cells) / 2.5), 1, 8);
     case "polygon":
       return clamp(Math.round(polyArea(g.ring) / 30000), 1, 8);
     case "gemeinde":
@@ -296,10 +294,16 @@ const DATASET_DEFS: DatasetDef[] = [
 /* ------------------------------- builders ------------------------------- */
 
 /** Build the "Features" tab result for a query geometry. */
-export function buildFeaturesResult(g: QueryGeometry): FeaturesResult {
+export function buildFeaturesResult(
+  g: QueryGeometry,
+  includeClipped = true,
+): FeaturesResult {
   const center = g.center;
   const { dtm, dom } = pseudoHeight(center);
-  const base = baseCount(g);
+  // Excluding boundary-clipped features shrinks the captured set.
+  const base = includeClipped
+    ? baseCount(g)
+    : Math.max(1, Math.round(baseCount(g) * 0.55));
   const root = hashCoord(center);
 
   const datasets: IdentifyDataset[] = DATASET_DEFS.map((def, di) => ({
@@ -334,9 +338,14 @@ const FLAT_MAPS: DatasetHit[] = CATALOG.flatMap((t) =>
 );
 
 /** Build the "Datasets" tab result: catalog maps that have data here. */
-export function buildDatasetsResult(g: QueryGeometry): DatasetHit[] {
+export function buildDatasetsResult(
+  g: QueryGeometry,
+  includeClipped = true,
+): DatasetHit[] {
   const r = makeRng(hashCoord(g.center));
-  const base = baseCount(g);
+  const base = includeClipped
+    ? baseCount(g)
+    : Math.max(1, Math.round(baseCount(g) * 0.55));
   const n = clamp(3 + Math.round(base * 1.2), 3, 9);
 
   // The "no statistics" layer always appears at the top.
