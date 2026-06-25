@@ -51,14 +51,12 @@ export function CatalogMapRow({
   title,
   isActive,
   onAdd,
-  hitCount,
   trailing,
 }: {
   id: string;
   title: string;
   isActive: boolean;
   onAdd: () => void;
-  hitCount?: number;
   trailing?: React.ReactNode;
 }) {
   return (
@@ -75,14 +73,6 @@ export function CatalogMapRow({
       <span className="line-clamp-2 min-w-0 flex-1 text-[13px] leading-tight">
         {title}
       </span>
-      {hitCount != null && (
-        <span
-          className="shrink-0 rounded-full bg-zh-blue/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-zh-blue"
-          title={`${hitCount} Objekt(e) an dieser Stelle`}
-        >
-          {hitCount}
-        </span>
-      )}
       {trailing}
     </div>
   );

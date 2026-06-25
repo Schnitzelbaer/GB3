@@ -4,6 +4,7 @@ import {
   Printer,
   ChevronDown,
   ChevronRight,
+  Info as InfoIcon,
   Layers,
   MapPin,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import {
 } from "./ui/select";
 import { Switch } from "./ui/switch";
 import { CatalogMapRow } from "./catalog/CatalogMapRow";
+import { CatalogThemeGroup } from "./catalog/CatalogThemeGroup";
 import { StatistikView } from "./info/StatistikView";
 import { BlackInfo, DatasetDisclosure } from "./info/DatasetDisclosure";
 import { formatLv95 } from "@/lib/swissProjection";
@@ -47,6 +49,37 @@ const MODES: { id: QueryMode; label: string }[] = [
   { id: "polygon", label: "Polygon" },
   { id: "gemeinde", label: "Gemeinde" },
 ];
+
+/** Short explanation of each tab, shown in the collapsible info banner. */
+const TAB_HELP: Record<QueryTab, string> = {
+  features:
+    "Liest die an der angeklickten Stelle bzw. im gewählten Bereich " +
+    "getroffenen Objekte (Features) der Datensätze aus und zeigt ihre " +
+    "Sachdaten – gruppiert nach Datensatz und Layer.",
+  statistik:
+    "Fasst die getroffenen Objekte je Datensatz statistisch zusammen – " +
+    "Summe, Median, Durchschnitt sowie Min und Max.",
+  datasets:
+    "Zeigt, welche Datensätze an der angeklickten Stelle Daten enthalten – " +
+    "nach Thema gruppiert. Über das Plus fügst du einen Datensatz zu den " +
+    "aktiven Karten hinzu.",
+};
+
+/** Group dataset hits by their theme, preserving first-seen order. */
+function groupByTheme(
+  hits: DatasetHit[],
+): { themeTitle: string; hits: DatasetHit[] }[] {
+  const groups: { themeTitle: string; hits: DatasetHit[] }[] = [];
+  for (const h of hits) {
+    let g = groups.find((x) => x.themeTitle === h.themeTitle);
+    if (!g) {
+      g = { themeTitle: h.themeTitle, hits: [] };
+      groups.push(g);
+    }
+    g.hits.push(h);
+  }
+  return groups;
+}
 
 interface InfoPanelProps {
   query: InfoQueryState;
@@ -263,8 +296,12 @@ export function InfoPanel({
   onAddMap,
 }: InfoPanelProps) {
   const [coordsOpen, setCoordsOpen] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(true);
   const CoordChevron = coordsOpen ? ChevronDown : ChevronRight;
+  const HelpChevron = helpOpen ? ChevronDown : ChevronRight;
   const hasQuery = query.geometry !== null;
+  const tabLabel =
+    TABS.find((t) => t.id === query.tab)?.label ?? "";
 
   return (
     <div className="animate-panel-in flex h-full flex-col border-l border-border bg-white">
@@ -340,6 +377,26 @@ export function InfoPanel({
 
       {/* content */}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto border-t border-border px-4">
+        {/* collapsible per-tab info */}
+        <div className="border-b border-border py-2">
+          <button
+            type="button"
+            onClick={() => setHelpOpen((o) => !o)}
+            className="flex w-full items-center gap-2 text-left"
+          >
+            <InfoIcon className="size-4 shrink-0 text-zh-blue" />
+            <span className="flex-1 text-[13px] font-semibold">
+              Was zeigt der {tabLabel}-Tab?
+            </span>
+            <HelpChevron className="size-4 shrink-0 text-zinc-500" />
+          </button>
+          {helpOpen && (
+            <p className="pl-6 pr-1 pt-1 text-xs leading-relaxed text-muted-foreground">
+              {TAB_HELP[query.tab]}
+            </p>
+          )}
+        </div>
+
         {query.geometry?.kind === "gemeinde" && (
           <div className="flex items-center gap-2 border-b border-border py-2.5 text-sm">
             <MapPin className="size-4 shrink-0 text-zh-blue" />
@@ -413,16 +470,19 @@ export function InfoPanel({
               </EmptyHint>
             )}
             {datasets && (
-              <div className="divide-y divide-border">
-                {datasets.map((d) => (
-                  <CatalogMapRow
-                    key={d.id}
-                    id={d.id}
-                    title={d.title}
-                    isActive={activeLayerIds.has(d.id)}
-                    onAdd={() => onAddMap(d.id, d.title)}
-                    hitCount={d.hitCount}
-                  />
+              <div className="-mx-4">
+                {groupByTheme(datasets).map((g) => (
+                  <CatalogThemeGroup key={g.themeTitle} title={g.themeTitle}>
+                    {g.hits.map((d) => (
+                      <CatalogMapRow
+                        key={d.id}
+                        id={d.id}
+                        title={d.title}
+                        isActive={activeLayerIds.has(d.id)}
+                        onAdd={() => onAddMap(d.id, d.title)}
+                      />
+                    ))}
+                  </CatalogThemeGroup>
                 ))}
               </div>
             )}

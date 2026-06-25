@@ -333,7 +333,6 @@ const FLAT_MAPS: DatasetHit[] = CATALOG.flatMap((t) =>
     id: m.id,
     title: m.title,
     themeTitle: t.title,
-    hitCount: 0,
   })),
 );
 
@@ -354,14 +353,12 @@ export function buildDatasetsResult(
       id: NO_STATS_LAYER.id,
       title: NO_STATS_LAYER.title,
       themeTitle: "Bauten",
-      hitCount: int(r, 1, Math.max(2, base * 3)),
     },
   ];
   const pool = [...FLAT_MAPS];
   for (let k = 0; k < n && pool.length > 0; k++) {
     const idx = Math.floor(r() * pool.length);
-    const m = pool.splice(idx, 1)[0];
-    out.push({ ...m, hitCount: int(r, 1, Math.max(2, base * 3)) });
+    out.push(pool.splice(idx, 1)[0]);
   }
   return out;
 }

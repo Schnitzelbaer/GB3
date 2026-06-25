@@ -72,12 +72,11 @@ export interface FeaturesResult {
   datasets: IdentifyDataset[];
 }
 
-/** A catalog map that has features at the queried location ("Datasets" tab). */
+/** A catalog map that has data at the queried location ("Datasets" tab). */
 export interface DatasetHit {
   id: string;
   title: string;
   themeTitle: string;
-  hitCount: number;
 }
 
 /* ----------------------------- Statistik tab ---------------------------- */
