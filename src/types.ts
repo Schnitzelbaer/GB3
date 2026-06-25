@@ -83,40 +83,25 @@ export interface DatasetHit {
 
 /* ----------------------------- Statistik tab ---------------------------- */
 
-/** Cell shading relative to the cantonal average. */
-export type StatTone = "low" | "mid" | "high";
-
 export interface StatCell {
   value: string;
-  tone?: StatTone;
 }
 
 export interface StatRow {
+  /** Metric label including its unit, e.g. "Beschäftigte (Personen)". */
   label: string;
-  /** [100 m, 200 m, 400 m, Kt. ZH] */
+  /** [Summe, Median, Durchschnitt, Min, Max] */
   cells: StatCell[];
-  unit: string;
-  /** Render emphasised (totals). */
-  strong?: boolean;
-}
-
-export interface StatSection {
-  /** Optional sub-header (e.g. "Gebäude nach Gebäudealter"). */
-  title?: string;
-  rows: StatRow[];
 }
 
 export interface StatBlock {
   id: string;
   title: string;
-  date: string;
-  /** Column headers, e.g. ["100m", "200m", "400m", "Kt. ZH"]. */
-  columns: string[];
-  sections: StatSection[];
-  /** Show the red/neutral/green legend (Gebäude block). */
-  colorLegend?: boolean;
+  rows: StatRow[];
+  /** No statistics available → render a placeholder instead of a table. */
+  placeholder?: boolean;
   definition?: string;
-  source: string;
+  source?: string;
 }
 
 /** Central, persistent state of the info-query tool (single source of truth). */
