@@ -7,6 +7,7 @@ import {
   Info as InfoIcon,
   Layers,
   MapPin,
+  Settings,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -20,6 +21,12 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { CatalogMapRow } from "./catalog/CatalogMapRow";
 import { CatalogThemeGroup } from "./catalog/CatalogThemeGroup";
 import { StatistikView } from "./info/StatistikView";
@@ -297,6 +304,7 @@ export function InfoPanel({
 }: InfoPanelProps) {
   const [coordsOpen, setCoordsOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const CoordChevron = coordsOpen ? ChevronDown : ChevronRight;
   const HelpChevron = helpOpen ? ChevronDown : ChevronRight;
   const hasQuery = query.geometry !== null;
@@ -318,60 +326,108 @@ export function InfoPanel({
         </button>
       </div>
 
-      {/* tabs + mode */}
+      {/* tabs + settings */}
       <div className="space-y-2.5 px-4 pb-3 pt-1">
-        <Tabs value={query.tab} onValueChange={(v) => onChangeTab(v as QueryTab)}>
-          <TabsList>
-            {TABS.map((t) => (
-              <TabsTrigger key={t.id} value={t.id}>
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
         <div className="flex items-stretch gap-2">
-          <Select
-            value={query.mode}
-            onValueChange={(v) => onChangeMode(v as QueryMode)}
+          <Tabs
+            value={query.tab}
+            onValueChange={(v) => onChangeTab(v as QueryTab)}
+            className="min-w-0 flex-1"
           >
-            <SelectTrigger className="h-12 flex-1">
-              <div className="flex flex-col items-start text-left">
-                <span className="text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground">
-                  Modus
-                </span>
-                <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {MODES.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.label}
-                </SelectItem>
+            <TabsList>
+              {TABS.map((t) => (
+                <TabsTrigger key={t.id} value={t.id}>
+                  {t.label}
+                </TabsTrigger>
               ))}
-            </SelectContent>
-          </Select>
-
-          {query.mode === "umkreis" && (
-            <NumberField
-              label="Radius"
-              value={query.radiusM}
-              suffix="m"
-              min={1}
-              onChange={onChangeRadius}
-            />
-          )}
+            </TabsList>
+          </Tabs>
+          <button
+            type="button"
+            title="Einstellungen"
+            aria-pressed={settingsOpen}
+            onClick={() => setSettingsOpen((o) => !o)}
+            className={cn(
+              "grid w-10 shrink-0 place-items-center rounded-md border transition-colors",
+              settingsOpen
+                ? "border-zh-blue bg-zh-blue text-white"
+                : "border-input text-zinc-600 hover:bg-muted",
+            )}
+          >
+            <Settings className="size-[18px]" />
+          </button>
         </div>
 
-        {/* Clipped-features toggle — area modes only (no effect on Punkt). */}
-        {query.mode !== "punkt" && (
-          <label className="flex h-11 items-center justify-between gap-2 rounded-md border border-input px-3">
-            <span className="text-sm">Angeschnittene Features</span>
-            <Switch
-              checked={query.includeClipped}
-              onCheckedChange={onToggleClipped}
-            />
-          </label>
+        {settingsOpen && (
+          <>
+            <div className="flex items-stretch gap-2">
+              <Select
+                value={query.mode}
+                onValueChange={(v) => onChangeMode(v as QueryMode)}
+              >
+                <SelectTrigger className="h-12 flex-1">
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground">
+                      Modus
+                    </span>
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {MODES.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {query.mode === "umkreis" && (
+                <NumberField
+                  label="Radius"
+                  value={query.radiusM}
+                  suffix="m"
+                  min={1}
+                  onChange={onChangeRadius}
+                />
+              )}
+            </div>
+
+            {/* Clipped-features toggle — area modes only (no effect on Punkt). */}
+            {query.mode !== "punkt" && (
+              <div className="flex h-11 items-center justify-between gap-2 rounded-md border border-input px-3">
+                <span className="flex items-center gap-1.5 text-sm">
+                  Angeschnittene Features
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-zinc-400 hover:text-foreground"
+                          aria-label="Was bewirkt diese Option?"
+                        >
+                          <InfoIcon className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-[230px] text-xs font-normal"
+                      >
+                        Wenn aktiviert, werden auch Objekte berücksichtigt, die
+                        vom Rand des Abfragebereichs nur angeschnitten werden
+                        (teilweise im Bereich liegen) – nicht nur vollständig
+                        enthaltene.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </span>
+                <Switch
+                  checked={query.includeClipped}
+                  onCheckedChange={onToggleClipped}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 
