@@ -57,20 +57,10 @@ const MODES: { id: QueryMode; label: string }[] = [
   { id: "gemeinde", label: "Gemeinde" },
 ];
 
-/** Short explanation of each tab, shown in the collapsible info banner. */
-const TAB_HELP: Record<QueryTab, string> = {
-  features:
-    "Liest die an der angeklickten Stelle bzw. im gewählten Bereich " +
-    "getroffenen Objekte (Features) der Datensätze aus und zeigt ihre " +
-    "Sachdaten – gruppiert nach Datensatz und Layer.",
-  statistik:
-    "Fasst die getroffenen Objekte je Datensatz statistisch zusammen – " +
-    "Summe, Median, Durchschnitt sowie Min und Max.",
-  datasets:
-    "Zeigt, welche Datensätze an der angeklickten Stelle Daten enthalten – " +
-    "nach Thema gruppiert. Über das Plus fügst du einen Datensatz zu den " +
-    "aktiven Karten hinzu.",
-};
+/** Explanation shown in the collapsible info banner (Datasets tab only). */
+const DATASETS_HELP =
+  "Zeigt, welche Datensätze aus dem Kartenkatalog für den ausgewählten " +
+  "Bereich Daten enthalten.";
 
 /** Group dataset hits by their theme, preserving first-seen order. */
 function groupByTheme(
@@ -308,8 +298,6 @@ export function InfoPanel({
   const CoordChevron = coordsOpen ? ChevronDown : ChevronRight;
   const HelpChevron = helpOpen ? ChevronDown : ChevronRight;
   const hasQuery = query.geometry !== null;
-  const tabLabel =
-    TABS.find((t) => t.id === query.tab)?.label ?? "";
 
   return (
     <div className="animate-panel-in flex h-full flex-col border-l border-border bg-white">
@@ -433,25 +421,27 @@ export function InfoPanel({
 
       {/* content */}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto border-t border-border px-4">
-        {/* collapsible per-tab info */}
-        <div className="border-b border-border py-2">
-          <button
-            type="button"
-            onClick={() => setHelpOpen((o) => !o)}
-            className="flex w-full items-center gap-2 text-left"
-          >
-            <InfoIcon className="size-4 shrink-0 text-zh-blue" />
-            <span className="flex-1 text-[13px] font-semibold">
-              Was zeigt der {tabLabel}-Tab?
-            </span>
-            <HelpChevron className="size-4 shrink-0 text-zinc-500" />
-          </button>
-          {helpOpen && (
-            <p className="pl-6 pr-1 pt-1 text-xs leading-relaxed text-muted-foreground">
-              {TAB_HELP[query.tab]}
-            </p>
-          )}
-        </div>
+        {/* collapsible info — Datasets tab only */}
+        {query.tab === "datasets" && (
+          <div className="border-b border-border py-2">
+            <button
+              type="button"
+              onClick={() => setHelpOpen((o) => !o)}
+              className="flex w-full items-center gap-2 text-left"
+            >
+              <InfoIcon className="size-4 shrink-0 text-zh-blue" />
+              <span className="flex-1 text-[13px] font-semibold">
+                Was zeigt der Datasets-Tab?
+              </span>
+              <HelpChevron className="size-4 shrink-0 text-zinc-500" />
+            </button>
+            {helpOpen && (
+              <p className="pl-6 pr-1 pt-1 text-xs leading-relaxed text-muted-foreground">
+                {DATASETS_HELP}
+              </p>
+            )}
+          </div>
+        )}
 
         {query.geometry?.kind === "gemeinde" && (
           <div className="flex items-center gap-2 border-b border-border py-2.5 text-sm">
