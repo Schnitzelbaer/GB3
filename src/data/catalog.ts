@@ -188,8 +188,3 @@ export const CATALOG: CatalogTheme[] = [
     ],
   },
 ];
-
-/** Map id that is bound to the interactive sample overlay on the map. */
-export const HERO_LAYER_ID = "pflegeplan-aktuell";
-export const HERO_LAYER_TITLE =
-  "1. Pflegeplan Naturschutz-Teilflächen: aktuelles Jahr";

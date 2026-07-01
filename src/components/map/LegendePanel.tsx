@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BookOpen, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { SAMPLE_MAPS } from "@/lib/overlayLayer";
 
 function LegendRow({
   color,
@@ -53,24 +54,17 @@ export function LegendePanel() {
             </button>
           </div>
           <div className="text-xs font-semibold text-foreground">
-            Pflegeplan Naturschutz-Teilflächen
+            Aktive Karten
           </div>
           <ul className="mt-2 space-y-1.5">
-            <LegendRow
-              color="rgba(201,64,178,0.55)"
-              border="rgba(140,24,120,1)"
-              label="Naturschutzfläche (NHG)"
-            />
-            <LegendRow
-              color="rgba(243,146,55,0.6)"
-              border="rgba(196,96,16,1)"
-              label="Vernetzungsfläche"
-            />
-            <LegendRow
-              color="rgba(120,190,90,0.6)"
-              border="rgba(70,130,50,1)"
-              label="Extensiv genutzte Wiese"
-            />
+            {SAMPLE_MAPS.map((m) => (
+              <LegendRow
+                key={m.id}
+                color={`${m.color}66`}
+                border={m.color}
+                label={m.title}
+              />
+            ))}
           </ul>
         </div>
       )}

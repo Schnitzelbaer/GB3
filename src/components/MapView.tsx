@@ -23,9 +23,14 @@ import {
   resolutionToScale,
 } from "@/lib/swissProjection";
 import { BASEMAPS, createBasemapSource, type BasemapId } from "@/lib/basemaps";
-import { createOverlayLayer } from "@/lib/overlayLayer";
+import { createSampleLayers } from "@/lib/overlayLayer";
 import { findMunicipality } from "@/lib/municipalities";
-import type { InfoQueryState, QueryGeometry, QueryTab } from "@/types";
+import type {
+  ActiveLayer,
+  InfoQueryState,
+  QueryGeometry,
+  QueryTab,
+} from "@/types";
 
 import { Button } from "./ui/button";
 import { SearchBox } from "./map/SearchBox";
@@ -70,8 +75,7 @@ function geometryFeatures(g: QueryGeometry): Feature[] {
 interface MapViewProps {
   basemapId: BasemapId;
   onChangeBasemap: (id: BasemapId) => void;
-  overlayVisible: boolean;
-  overlayOpacity: number;
+  activeLayers: ActiveLayer[];
   query: InfoQueryState;
   onQuery: (geometry: QueryGeometry) => void;
   onSelectArt: (tab: QueryTab) => void;
@@ -86,8 +90,7 @@ interface MapViewProps {
 export function MapView({
   basemapId,
   onChangeBasemap,
-  overlayVisible,
-  overlayOpacity,
+  activeLayers,
   query,
   onQuery,
   onSelectArt,
@@ -101,9 +104,7 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const basemapLayerRef = useRef<TileLayer<WMTS> | null>(null);
-  const overlayLayerRef = useRef<ReturnType<typeof createOverlayLayer> | null>(
-    null,
-  );
+  const sampleLayersRef = useRef<ReturnType<typeof createSampleLayers>>([]);
   const geomSourceRef = useRef<VectorSource | null>(null);
   const highlightSourceRef = useRef<VectorSource | null>(null);
   const pinOverlayRef = useRef<Overlay | null>(null);
@@ -131,9 +132,7 @@ export function MapView({
       ),
       preload: 2,
     });
-    const overlay = createOverlayLayer();
-    overlay.setVisible(overlayVisible);
-    overlay.setOpacity(overlayOpacity);
+    const sampleLayers = createSampleLayers();
 
     const geomSource = new VectorSource();
     const geomLayer = new VectorLayer({ source: geomSource, style: GEOM_STYLE });
@@ -154,7 +153,12 @@ export function MapView({
 
     const olMap = new Map({
       target: containerRef.current,
-      layers: [basemapLayer, overlay, geomLayer, highlightLayer],
+      layers: [
+        basemapLayer,
+        ...sampleLayers.map((s) => s.layer),
+        geomLayer,
+        highlightLayer,
+      ],
       view,
       controls: [],
     });
@@ -212,7 +216,7 @@ export function MapView({
     });
 
     basemapLayerRef.current = basemapLayer;
-    overlayLayerRef.current = overlay;
+    sampleLayersRef.current = sampleLayers;
     geomSourceRef.current = geomSource;
     highlightSourceRef.current = highlightSource;
     pinOverlayRef.current = pinOverlay;
@@ -238,13 +242,14 @@ export function MapView({
       basemapLayerRef.current.setSource(createBasemapSource(def));
   }, [basemapId]);
 
+  // Drive each sample layer's visibility/opacity from the active-maps state.
   useEffect(() => {
-    overlayLayerRef.current?.setVisible(overlayVisible);
-  }, [overlayVisible]);
-
-  useEffect(() => {
-    overlayLayerRef.current?.setOpacity(overlayOpacity);
-  }, [overlayOpacity]);
+    for (const { id, layer } of sampleLayersRef.current) {
+      const al = activeLayers.find((l) => l.id === id);
+      layer.setVisible(!!al?.visible);
+      layer.setOpacity(al?.opacity ?? 1);
+    }
+  }, [activeLayers, map]);
 
   // Draw the current query geometry + position the pin. While a polygon is
   // pending (mode is polygon but nothing drawn yet), suppress the old pin/shape.

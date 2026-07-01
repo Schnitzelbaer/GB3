@@ -6,7 +6,8 @@ import { LeftPanel } from "./components/LeftPanel";
 import { MapView } from "./components/MapView";
 import { InfoPanel } from "./components/InfoPanel";
 import { ResizeHandle } from "./components/ResizeHandle";
-import { CATALOG, HERO_LAYER_ID, HERO_LAYER_TITLE } from "./data/catalog";
+import { CATALOG } from "./data/catalog";
+import { SAMPLE_MAPS } from "./lib/overlayLayer";
 import { buildDatasetsResult, buildFeaturesResult } from "./data/infoQuery";
 import { buildStatistik } from "./data/statistik";
 import { findMunicipality } from "./lib/municipalities";
@@ -68,13 +69,15 @@ export default function App() {
   const [basemapId, setBasemapId] = useState<BasemapId>("grau");
   const [query, setQuery] = useState<InfoQueryState>(INITIAL_QUERY);
   const [stubTool, setStubTool] = useState<string | null>(null);
-  const [activeLayers, setActiveLayers] = useState<ActiveLayer[]>([
-    { id: HERO_LAYER_ID, title: HERO_LAYER_TITLE, visible: true, opacity: 1 },
-  ]);
+  const [activeLayers, setActiveLayers] = useState<ActiveLayer[]>(
+    SAMPLE_MAPS.map((m) => ({
+      id: m.id,
+      title: m.title,
+      visible: true,
+      opacity: 1,
+    })),
+  );
 
-  const hero = activeLayers.find((l) => l.id === HERO_LAYER_ID);
-  const overlayVisible = !!hero?.visible;
-  const overlayOpacity = hero?.opacity ?? 1;
   const activeLayerIds = useMemo(
     () => new Set(activeLayers.map((l) => l.id)),
     [activeLayers],
@@ -268,8 +271,7 @@ export default function App() {
           <MapView
             basemapId={basemapId}
             onChangeBasemap={setBasemapId}
-            overlayVisible={overlayVisible}
-            overlayOpacity={overlayOpacity}
+            activeLayers={activeLayers}
             query={query}
             onQuery={runQuery}
             onSelectArt={selectArt}
