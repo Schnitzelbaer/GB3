@@ -33,7 +33,7 @@ import type {
 } from "@/types";
 
 import { Button } from "./ui/button";
-import { SearchBox } from "./map/SearchBox";
+import { SearchBox } from "./search/SearchBox";
 import { NavControls } from "./map/NavControls";
 import { ToolsColumn } from "./map/ToolsColumn";
 import { InfoArtFlyout } from "./map/InfoArtFlyout";
@@ -85,6 +85,7 @@ interface MapViewProps {
   onSelectTool: (id: string) => void;
   leftPanelOpen: boolean;
   onOpenLeftPanel: () => void;
+  onAddMap: (id: string, title: string) => void;
 }
 
 export function MapView({
@@ -100,6 +101,7 @@ export function MapView({
   onSelectTool,
   leftPanelOpen,
   onOpenLeftPanel,
+  onAddMap,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
@@ -337,9 +339,9 @@ export function MapView({
           <LegendePanel />
         </div>
 
-        {/* top-right: search */}
-        <div className="pointer-events-none absolute right-3 top-3 z-10 flex w-[min(640px,calc(100%-9rem))] justify-end">
-          <SearchBox />
+        {/* top-right: search (panel opens below the field, right-aligned) */}
+        <div className="pointer-events-none absolute inset-x-3 bottom-12 top-3 z-20 flex items-start justify-end">
+          <SearchBox activeLayers={activeLayers} onAddMap={onAddMap} />
         </div>
 
         {/* right edge: Abfrage-Art flyout (left) + tool column */}

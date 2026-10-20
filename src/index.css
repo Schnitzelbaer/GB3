@@ -128,6 +128,45 @@
   pointer-events: none;
 }
 
+/* Search marker: dot with halo and a dark label above it. */
+.zh-search-marker {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+.zh-search-marker__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--zh-blue) 22%, transparent);
+}
+.zh-search-marker__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 9999px;
+  background: var(--zh-blue);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.zh-search-marker__label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #1f2a33;
+  color: #fff;
+  font: 600 12px/1.25 var(--font-sans);
+  padding: 5px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
 /* Info panel slides in when an object is clicked. */
 @keyframes zh-panel-in {
   from {

@@ -281,6 +281,7 @@ export default function App() {
             onSelectTool={handleSelectTool}
             leftPanelOpen={leftOpen}
             onOpenLeftPanel={() => setLeftOpen(true)}
+            onAddMap={addMap}
           />
         </div>
 

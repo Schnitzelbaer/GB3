@@ -79,6 +79,43 @@ export interface DatasetHit {
   themeTitle: string;
 }
 
+/* -------------------------------- Suche --------------------------------- */
+
+/** Kind of search result (also the filter id for the type filters). */
+export type SearchHitType =
+  | "adresse"
+  | "ort"
+  | "gvz"
+  | "parzelle"
+  | "egrid"
+  | "egid"
+  | "objekt"
+  | "karte";
+
+export interface SearchHit {
+  id: string;
+  type: SearchHitType;
+  /** Main line; the search term is highlighted in the UI. */
+  title: string;
+  /** Type label, first part of the subtitle (e.g. "GVZ-Nummer"). */
+  label: string;
+  /** Identifier after the label (number types); highlighted in the UI. */
+  value?: string;
+  /** Plain context after the label (e.g. "Gemeinde Rafz"). */
+  context?: string;
+  /** Objekt: names of the active maps containing it (set per view). */
+  tags?: string[];
+  /** Objekt: ids of the maps whose search index contains it. */
+  mapIds?: string[];
+  /** Karte: id of the catalog map. */
+  catalogId?: string;
+  coordinate?: Coordinate;
+  /** Map resolution to zoom to when jumping to the hit. */
+  resolution?: number;
+  /** Relevance within its group (higher first). */
+  score: number;
+}
+
 /* ----------------------------- Statistik tab ---------------------------- */
 
 export interface StatCell {

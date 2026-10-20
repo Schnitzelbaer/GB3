@@ -129,6 +129,7 @@ export const CATALOG: CatalogTheme[] = [
     maps: [
       { id: "planung-richtplan", title: "Kantonaler Richtplan" },
       { id: "planung-nutzungsplanung", title: "Kommunale Nutzungsplanung" },
+      { id: "planung-lageklassen", title: "Lageklassen 2024" },
     ],
   },
   {
