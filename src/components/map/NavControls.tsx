@@ -1,6 +1,8 @@
 import { Plus, Minus, Home, LocateFixed } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import type Map from "ol/Map";
+
 import { useMapInstance, CANTON_EXTENT } from "@/lib/mapContext";
 
 function ZoomButton({
@@ -29,6 +31,26 @@ function ZoomButton({
   );
 }
 
+/** Centre the map on the device position (fallback: city of Zürich). */
+export function locate(map: Map | null) {
+  if (!map || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const coord = [pos.coords.longitude, pos.coords.latitude];
+      import("ol/proj").then(({ fromLonLat }) => {
+        map.getView().animate({
+          center: fromLonLat(coord, "EPSG:2056"),
+          resolution: 2,
+          duration: 600,
+        });
+      });
+    },
+    () => {
+      map.getView().animate({ center: [2683100, 1247600], resolution: 5 });
+    },
+  );
+}
+
 export function NavControls() {
   const map = useMapInstance();
 
@@ -45,32 +67,9 @@ export function NavControls() {
     map.getView().fit(CANTON_EXTENT, { duration: 500, padding: [20, 20, 20, 20] });
   }
 
-  function locate() {
-    if (!map) return;
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coord = [pos.coords.longitude, pos.coords.latitude];
-        import("ol/proj").then(({ fromLonLat }) => {
-          map
-            .getView()
-            .animate({
-              center: fromLonLat(coord, "EPSG:2056"),
-              resolution: 2,
-              duration: 600,
-            });
-        });
-      },
-      () => {
-        // Fallback: centre on the city of Zürich.
-        map.getView().animate({ center: [2683100, 1247600], resolution: 5 });
-      },
-    );
-  }
-
   return (
     <div className="flex flex-col overflow-hidden rounded-md border border-black/10 bg-white shadow-md">
-      <ZoomButton title="Standort" onClick={locate}>
+      <ZoomButton title="Standort" onClick={() => locate(map)}>
         <LocateFixed className="size-[18px]" />
       </ZoomButton>
       <div className="h-px bg-border" />

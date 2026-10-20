@@ -34,6 +34,8 @@ import type {
 
 import { Button } from "./ui/button";
 import { SearchBox } from "./search/SearchBox";
+import { MobileMapChrome } from "./mobile/MobileMapChrome";
+import { useIsMobile } from "@/lib/useIsMobile";
 import { NavControls } from "./map/NavControls";
 import { ToolsColumn } from "./map/ToolsColumn";
 import { InfoArtFlyout } from "./map/InfoArtFlyout";
@@ -86,6 +88,9 @@ interface MapViewProps {
   leftPanelOpen: boolean;
   onOpenLeftPanel: () => void;
   onAddMap: (id: string, title: string) => void;
+  /** Mobile: open the navigation menu / the active-maps sheet. */
+  onOpenMenu: () => void;
+  onOpenMaps: () => void;
 }
 
 export function MapView({
@@ -102,7 +107,10 @@ export function MapView({
   leftPanelOpen,
   onOpenLeftPanel,
   onAddMap,
+  onOpenMenu,
+  onOpenMaps,
 }: MapViewProps) {
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const basemapLayerRef = useRef<TileLayer<WMTS> | null>(null);
@@ -270,6 +278,21 @@ export function MapView({
     pinOverlayRef.current?.setPosition(g.center);
   }, [query.geometry, query.mode]);
 
+  // Mobile: the Info bottom sheet covers the lower part of the map, so move
+  // a new query location into the visible upper part.
+  useEffect(() => {
+    const g = query.geometry;
+    if (!isMobile || !map || !g) return;
+    const view = map.getView();
+    const size = map.getSize();
+    const res = view.getResolution();
+    if (!size || !res) return;
+    view.animate({
+      center: [g.center[0], g.center[1] - size[1] * 0.22 * res],
+      duration: 350,
+    });
+  }, [isMobile, map, query.geometry]);
+
   // Highlight the marked feature.
   useEffect(() => {
     const src = highlightSourceRef.current;
@@ -324,53 +347,68 @@ export function MapView({
       <div ref={containerRef} className="absolute inset-0" />
 
       <MapContext.Provider value={map}>
-        {/* top-left: open-panel button (when closed) + Legende */}
-        <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2">
-          {!leftPanelOpen && (
-            <Button
-              variant="zh"
-              className="pointer-events-auto h-10 gap-2 shadow-md"
-              onClick={onOpenLeftPanel}
-            >
-              <PanelLeftOpen className="size-4" />
-              Karten
-            </Button>
-          )}
-          <LegendePanel />
-        </div>
-
-        {/* top-right: search (panel opens below the field, right-aligned) */}
-        <div className="pointer-events-none absolute inset-x-3 bottom-12 top-3 z-20 flex items-start justify-end">
-          <SearchBox activeLayers={activeLayers} onAddMap={onAddMap} />
-        </div>
-
-        {/* right edge: Abfrage-Art flyout (left) + tool column */}
-        <div className="absolute right-3 top-[5.5rem] z-10 flex items-start gap-2">
-          {query.flyoutOpen && (
-            <InfoArtFlyout tab={query.tab} onSelect={onSelectArt} />
-          )}
-          <ToolsColumn
-            activeTool={activeTool}
-            onSelectTool={onSelectTool}
-            infoTab={query.tab}
-          />
-        </div>
-
-        {/* bottom-right: basemap switcher + navigation */}
-        <div className="absolute bottom-12 right-3 z-10 flex flex-col items-end gap-2">
-          <BasemapSwitcher basemapId={basemapId} onChange={onChangeBasemap} />
-          <NavControls />
-        </div>
-
-        {/* bottom: status bar */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-          <StatusBar
-            coordinate={pointer}
-            scale={scale}
-            resolution={resolution}
-            attribution={attribution}
-          />
-        </div>
+        {isMobile ? (
+          <>
+            <MobileMapChrome
+              basemapId={basemapId}
+              onChangeBasemap={onChangeBasemap}
+              onOpenMenu={onOpenMenu}
+              onOpenMaps={onOpenMaps}
+            />
+            {/* renders its own fixed bar at the bottom on mobile */}
+            <SearchBox activeLayers={activeLayers} onAddMap={onAddMap} />
+          </>
+        ) : (
+          <>
+            {/* top-left: open-panel button (when closed) + Legende */}
+            <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2">
+              {!leftPanelOpen && (
+                <Button
+                  variant="zh"
+                  className="pointer-events-auto h-10 gap-2 shadow-md"
+                  onClick={onOpenLeftPanel}
+                >
+                  <PanelLeftOpen className="size-4" />
+                  Karten
+                </Button>
+              )}
+              <LegendePanel />
+            </div>
+    
+            {/* top-right: search (panel opens below the field, right-aligned) */}
+            <div className="pointer-events-none absolute inset-x-3 bottom-12 top-3 z-20 flex items-start justify-end">
+              <SearchBox activeLayers={activeLayers} onAddMap={onAddMap} />
+            </div>
+    
+            {/* right edge: Abfrage-Art flyout (left) + tool column */}
+            <div className="absolute right-3 top-[5.5rem] z-10 flex items-start gap-2">
+              {query.flyoutOpen && (
+                <InfoArtFlyout tab={query.tab} onSelect={onSelectArt} />
+              )}
+              <ToolsColumn
+                activeTool={activeTool}
+                onSelectTool={onSelectTool}
+                infoTab={query.tab}
+              />
+            </div>
+    
+            {/* bottom-right: basemap switcher + navigation */}
+            <div className="absolute bottom-12 right-3 z-10 flex flex-col items-end gap-2">
+              <BasemapSwitcher basemapId={basemapId} onChange={onChangeBasemap} />
+              <NavControls />
+            </div>
+    
+            {/* bottom: status bar */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
+              <StatusBar
+                coordinate={pointer}
+                scale={scale}
+                resolution={resolution}
+                attribution={attribution}
+              />
+            </div>
+          </>
+        )}
       </MapContext.Provider>
     </div>
   );

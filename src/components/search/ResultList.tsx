@@ -18,14 +18,24 @@ import type { SearchHit, SearchHitType } from "@/types";
 
 /** Hits shown per group before the accordion is opened. */
 export const COLLAPSED = 3;
-/** Upper bound of rows rendered for an expanded group. */
-export const EXPANDED_CAP = 100;
+/** Upper bound of rows rendered for a fully shown group. */
+export const ROW_CAP = 300;
+
+/**
+ * Rows shown for a group: all of them when exactly one filter is active
+ * (`showAll`, no accordion), otherwise 3 until the group is expanded.
+ */
+function rowLimit(key: string, expanded: Set<string>, showAll: boolean) {
+  return showAll || expanded.has(key) ? ROW_CAP : COLLAPSED;
+}
 
 /** The hits currently rendered, in list order (for keyboard navigation). */
-export function visibleHits(groups: ResultGroup[], expanded: Set<string>) {
-  return groups.flatMap((gr) =>
-    gr.hits.slice(0, expanded.has(gr.key) ? EXPANDED_CAP : COLLAPSED),
-  );
+export function visibleHits(
+  groups: ResultGroup[],
+  expanded: Set<string>,
+  showAll: boolean,
+) {
+  return groups.flatMap((gr) => gr.hits.slice(0, rowLimit(gr.key, expanded, showAll)));
 }
 
 const ICONS: Record<Exclude<SearchHitType, "karte">, typeof MapPin> = {
@@ -180,6 +190,7 @@ function Row({ hit, index, tokens, selected, mobile, mapActive, onPick, onHover 
 function Group({
   group,
   expanded,
+  showAll,
   onToggle,
   startIndex,
   cursor,
@@ -191,6 +202,7 @@ function Group({
 }: {
   group: ResultGroup;
   expanded: boolean;
+  showAll: boolean;
   onToggle: () => void;
   startIndex: number;
   cursor: number;
@@ -201,7 +213,8 @@ function Group({
   onHover: (hit: SearchHit | null) => void;
 }) {
   const n = group.hits.length;
-  const shown = group.hits.slice(0, expanded ? EXPANDED_CAP : COLLAPSED);
+  const full = showAll || expanded;
+  const shown = group.hits.slice(0, full ? ROW_CAP : COLLAPSED);
   const headingId = `search-group-${group.key}`;
   return (
     <section aria-labelledby={headingId} className="pb-1">
@@ -225,7 +238,7 @@ function Group({
           onHover={onHover}
         />
       ))}
-      {n > COLLAPSED && (
+      {!showAll && n > COLLAPSED && (
         <button
           type="button"
           aria-expanded={expanded}
@@ -239,9 +252,9 @@ function Group({
           {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
         </button>
       )}
-      {expanded && n > EXPANDED_CAP && (
+      {full && n > ROW_CAP && (
         <p className="pb-2 pl-16 text-xs text-muted-foreground">
-          {n - EXPANDED_CAP} weitere Treffer – Suchbegriff verfeinern
+          {n - ROW_CAP} weitere Treffer – Suchbegriff verfeinern
         </p>
       )}
     </section>
@@ -263,6 +276,7 @@ export function ResultList({
   groups,
   tokens,
   expanded,
+  showAll,
   onToggleExpand,
   cursor,
   mobile = false,
@@ -273,6 +287,8 @@ export function ResultList({
   groups: ResultGroup[];
   tokens: string[];
   expanded: Set<string>;
+  /** Exactly one filter active: show every hit, no accordion. */
+  showAll: boolean;
   onToggleExpand: (key: string) => void;
   cursor: number;
   mobile?: boolean;
@@ -286,12 +302,13 @@ export function ResultList({
     <div>
       {groups.map((gr) => {
         const startIndex = start;
-        start += Math.min(gr.hits.length, expanded.has(gr.key) ? EXPANDED_CAP : COLLAPSED);
+        start += Math.min(gr.hits.length, rowLimit(gr.key, expanded, showAll));
         return (
           <Group
             key={gr.key}
             group={gr}
             expanded={expanded.has(gr.key)}
+            showAll={showAll}
             onToggle={() => onToggleExpand(gr.key)}
             startIndex={startIndex}
             tokens={tokens}

@@ -24,6 +24,25 @@ function LegendRow({
   );
 }
 
+/** Legend entries of the active sample maps (shared with the mobile toolbar). */
+export function LegendList() {
+  return (
+    <>
+      <div className="text-xs font-semibold text-foreground">Aktive Karten</div>
+      <ul className="mt-2 space-y-1.5">
+        {SAMPLE_MAPS.map((m) => (
+          <LegendRow
+            key={m.id}
+            color={`${m.color}66`}
+            border={m.color}
+            label={m.title}
+          />
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export function LegendePanel() {
   const [open, setOpen] = useState(false);
 
@@ -53,19 +72,7 @@ export function LegendePanel() {
               <X className="size-4" />
             </button>
           </div>
-          <div className="text-xs font-semibold text-foreground">
-            Aktive Karten
-          </div>
-          <ul className="mt-2 space-y-1.5">
-            {SAMPLE_MAPS.map((m) => (
-              <LegendRow
-                key={m.id}
-                color={`${m.color}66`}
-                border={m.color}
-                label={m.title}
-              />
-            ))}
-          </ul>
+          <LegendList />
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@ import { ExternalLink, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const NAV: { label: string; active?: boolean; external?: boolean }[] = [
+export const NAV: { label: string; active?: boolean; external?: boolean }[] = [
   { label: "Geoportal" },
   { label: "GIS-Browser", active: true },
   { label: "Geodatenkatalog" },

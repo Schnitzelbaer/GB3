@@ -153,6 +153,7 @@ export function MobileSearch({
               groups={view.groups}
               tokens={tokens}
               expanded={expanded}
+              showAll={nActive === 1}
               onToggleExpand={onToggleExpand}
               cursor={-1}
               mobile

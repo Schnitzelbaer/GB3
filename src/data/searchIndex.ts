@@ -38,6 +38,11 @@ function fold(s: string): string {
 
 export const MIN_QUERY = 2;
 
+/** One-line text of a hit, used for the search field and the map label. */
+export function hitText(hit: Pick<SearchHit, "title" | "value">): string {
+  return hit.value ? `${hit.value}, ${hit.title}` : hit.title;
+}
+
 /** Split a query into folded tokens (all must match). */
 export function tokenize(query: string): string[] {
   return fold(query).split(/[\s,;]+/).filter(Boolean);

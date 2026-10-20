@@ -47,18 +47,27 @@ function Thumb({
 export function BasemapSwitcher({
   basemapId,
   onChange,
+  trigger,
+  side = "left",
+  align = "end",
 }: {
   basemapId: BasemapId;
   onChange: (id: BasemapId) => void;
+  /** Custom trigger (e.g. an icon button); default is the current thumb. */
+  trigger?: React.ReactNode;
+  side?: "left" | "bottom";
+  align?: "start" | "end";
 }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <span className="inline-block">
-          <Thumb id={basemapId} />
-        </span>
+        {trigger ?? (
+          <span className="inline-block">
+            <Thumb id={basemapId} />
+          </span>
+        )}
       </PopoverTrigger>
-      <PopoverContent side="left" align="end" className="w-auto">
+      <PopoverContent side={side} align={align} className="w-auto">
         <div className="flex gap-2">
           {BASEMAPS.map((b) => (
             <Thumb

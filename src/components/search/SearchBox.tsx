@@ -7,6 +7,7 @@ import { useMapInstance } from "@/lib/mapContext";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
   buildView,
+  hitText,
   isQueryValid,
   search,
   tokenize,
@@ -61,9 +62,11 @@ export function SearchBox({ activeLayers, onAddMap }: SearchBoxProps) {
     () => buildView(hits, activeMaps, filters),
     [hits, activeMaps, filters],
   );
+  // Exactly one filter active: every hit is shown, no accordion.
+  const showAll = view.effective.size === 1;
   const flat = useMemo(
-    () => visibleHits(view.groups, expanded),
-    [view.groups, expanded],
+    () => visibleHits(view.groups, expanded, showAll),
+    [view.groups, expanded, showAll],
   );
   const panelOpen = open && hasQuery && !isMobile;
 
@@ -81,36 +84,6 @@ export function SearchBox({ activeLayers, onAddMap }: SearchBoxProps) {
   // No marker in the empty state; otherwise the preview wins over the pin.
   const markerHit = preview ?? (panelOpen && view.total === 0 ? null : pinned);
   useEffect(() => showMarker(markerHit), [showMarker, markerHit]);
-
-  // Bring a previewed hit into the map area left of the panel if it is not
-  // visible there (pan only, no zoom; debounced while moving over the list).
-  useEffect(() => {
-    const coord = preview?.coordinate;
-    if (!coord || !map || !rootRef.current) return;
-    const timer = window.setTimeout(() => {
-      const view = map.getView();
-      const size = map.getSize();
-      const res = view.getResolution();
-      const target = map.getTargetElement();
-      if (!size || !res || !target || !rootRef.current) return;
-      const freeW =
-        rootRef.current.getBoundingClientRect().left -
-        target.getBoundingClientRect().left;
-      if (freeW < 160) return;
-      const px = map.getPixelFromCoordinate(coord);
-      const m = 40;
-      if (px && px[0] > m && px[0] < freeW - m && px[1] > m && px[1] < size[1] - m)
-        return;
-      view.animate({
-        center: [
-          coord[0] + (size[0] / 2 - freeW / 2) * res,
-          coord[1],
-        ],
-        duration: 400,
-      });
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [preview, map]);
 
   /* -------------------------------- actions ------------------------------- */
   const close = useCallback(() => {
@@ -132,6 +105,8 @@ export function SearchBox({ activeLayers, onAddMap }: SearchBoxProps) {
           resolution: hit.resolution ?? 1,
           duration: 650,
         });
+      // The field takes over the picked result; × clears it and the pin.
+      setQuery(hitText(hit));
       setPinned(hit);
       setMobileOpen(false);
       close();
@@ -220,18 +195,36 @@ export function SearchBox({ activeLayers, onAddMap }: SearchBoxProps) {
           onPick={pick}
         />
       ) : (
-        // The rest of the prototype is desktop-only, so on small screens the
-        // search gets its own fixed bar that opens the full-screen search.
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="fixed inset-x-3 top-[4.25rem] z-40 flex h-12 items-center gap-2 rounded-md border border-black/10 bg-white px-3 text-left text-sm shadow-md"
-        >
-          <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-          <span className={cn("truncate", !query && "text-muted-foreground")}>
-            {query || "Suchen nach Adressen, Orten, Karten …"}
-          </span>
-        </button>
+        // Mobile: search bar at the bottom of the map; it opens the
+        // full-screen search, × clears the term and the pin.
+        <div className="fixed inset-x-3 bottom-7 z-40 flex h-12 items-center rounded-md border border-black/15 bg-white pr-1 shadow-md">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="flex min-w-0 flex-1 items-center gap-2 self-stretch pl-3 text-left text-sm"
+          >
+            <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className={cn("truncate", !query && "text-muted-foreground")}>
+              {query || "Suchen nach Adressen, Orten, Karten …"}
+            </span>
+          </button>
+          {query && (
+            <button
+              type="button"
+              aria-label="Suche leeren"
+              onClick={() => {
+                setQuery("");
+                setPinned(null);
+                setExpanded(new Set());
+              }}
+              className="grid size-11 shrink-0 place-items-center"
+            >
+              <span className="grid size-5 place-items-center rounded-full bg-zinc-400 text-white">
+                <X className="size-3.5" />
+              </span>
+            </button>
+          )}
+        </div>
       ),
       document.body,
     );
@@ -325,6 +318,7 @@ export function SearchBox({ activeLayers, onAddMap }: SearchBoxProps) {
                 groups={view.groups}
                 tokens={tokens}
                 expanded={expanded}
+                showAll={showAll}
                 onToggleExpand={toggleExpand}
                 cursor={cursor}
                 activeLayerIds={activeLayerIds}

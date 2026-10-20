@@ -6,6 +6,8 @@ import { LeftPanel } from "./components/LeftPanel";
 import { MapView } from "./components/MapView";
 import { InfoPanel } from "./components/InfoPanel";
 import { ResizeHandle } from "./components/ResizeHandle";
+import { MobileMenu } from "./components/mobile/MobileMenu";
+import { useIsMobile } from "./lib/useIsMobile";
 import { CATALOG } from "./data/catalog";
 import { SAMPLE_MAPS } from "./lib/overlayLayer";
 import { buildDatasetsResult, buildFeaturesResult } from "./data/infoQuery";
@@ -63,6 +65,9 @@ function deriveGeometry(
 }
 
 export default function App() {
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mapsOpen, setMapsOpen] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
   const [leftWidth, setLeftWidth] = useState(330);
   const [infoWidth, setInfoWidth] = useState(420);
@@ -245,23 +250,44 @@ export default function App() {
     [],
   );
 
+  const leftPanel = (onClose: () => void) => (
+    <LeftPanel
+      catalog={CATALOG}
+      activeLayers={activeLayers}
+      onAddMap={addMap}
+      onRemoveLayer={removeLayer}
+      onClearActive={clearActive}
+      onToggleVisible={toggleVisible}
+      onSetOpacity={setOpacity}
+      onClose={onClose}
+    />
+  );
+  const infoPanel = (
+    <InfoPanel
+      query={query}
+      features={features}
+      datasets={datasets}
+      statistik={statistik}
+      activeLayerIds={activeLayerIds}
+      onClose={closeInfo}
+      onChangeTab={changeTab}
+      onChangeMode={changeMode}
+      onChangeRadius={changeRadius}
+      onToggleClipped={toggleClipped}
+      onSetMarked={setMarked}
+      onAddMap={addMap}
+    />
+  );
+  const infoOpen = query.active && query.panelOpen;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <Header />
+    <div className="flex h-dvh flex-col overflow-hidden">
+      {!isMobile && <Header />}
       <div className="flex min-h-0 flex-1">
-        {leftOpen && (
+        {!isMobile && leftOpen && (
           <>
             <div className="shrink-0" style={{ width: leftWidth }}>
-              <LeftPanel
-                catalog={CATALOG}
-                activeLayers={activeLayers}
-                onAddMap={addMap}
-                onRemoveLayer={removeLayer}
-                onClearActive={clearActive}
-                onToggleVisible={toggleVisible}
-                onSetOpacity={setOpacity}
-                onClose={() => setLeftOpen(false)}
-              />
+              {leftPanel(() => setLeftOpen(false))}
             </div>
             <ResizeHandle onResize={(x) => setLeftWidth(clamp(x, 260, 560))} />
           </>
@@ -282,10 +308,12 @@ export default function App() {
             leftPanelOpen={leftOpen}
             onOpenLeftPanel={() => setLeftOpen(true)}
             onAddMap={addMap}
+            onOpenMenu={() => setMenuOpen(true)}
+            onOpenMaps={() => setMapsOpen(true)}
           />
         </div>
 
-        {query.active && query.panelOpen && (
+        {!isMobile && infoOpen && (
           <>
             <ResizeHandle
               onResize={(x) =>
@@ -293,24 +321,25 @@ export default function App() {
               }
             />
             <div className="shrink-0" style={{ width: infoWidth }}>
-              <InfoPanel
-                query={query}
-                features={features}
-                datasets={datasets}
-                statistik={statistik}
-                activeLayerIds={activeLayerIds}
-                onClose={closeInfo}
-                onChangeTab={changeTab}
-                onChangeMode={changeMode}
-                onChangeRadius={changeRadius}
-                onToggleClipped={toggleClipped}
-                onSetMarked={setMarked}
-                onAddMap={addMap}
-              />
+              {infoPanel}
             </div>
           </>
         )}
       </div>
+
+      {/* Mobile: Info as bottom sheet, active maps as full-screen sheet, menu */}
+      {isMobile && infoOpen && (
+        <div className="fixed inset-x-0 bottom-0 z-[45] flex h-[58dvh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.18)]">
+          <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-zinc-300" />
+          <div className="min-h-0 flex-1">{infoPanel}</div>
+        </div>
+      )}
+      {isMobile && mapsOpen && (
+        <div className="fixed inset-0 z-[60] bg-white">
+          {leftPanel(() => setMapsOpen(false))}
+        </div>
+      )}
+      {isMobile && menuOpen && <MobileMenu onClose={() => setMenuOpen(false)} />}
     </div>
   );
 }

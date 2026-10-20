@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import Overlay from "ol/Overlay";
 import type Map from "ol/Map";
 
+import { hitText } from "@/data/searchIndex";
 import type { SearchHit } from "@/types";
 
 /**
@@ -42,7 +43,7 @@ export function useSearchMarker(map: Map | null) {
       m.overlay.setPosition(undefined);
       return;
     }
-    m.label.textContent = hit.title;
+    m.label.textContent = hitText(hit);
     m.overlay.setPosition(hit.coordinate);
   }, []);
 }
